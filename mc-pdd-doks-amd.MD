@@ -420,7 +420,7 @@ For TP1 workloads, a single NUMA-aligned RDMA rail provides the best balance bet
 Similar to the TP4 results, NUMA alignment remains important for maximizing KV cache transfer efficiency. However, the overall impact on end-to-end inference latency is limited, with KV cache transfer contributing less than 5% overhead.
 
 
-## Documentation and Resources
+## Documentation and Resources 
 
 - [RDMA Sharing Implementation for DOKS](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-rdma-sharing.MD)
 - [Multi-Node Environment Setup and Testing for DOKS with AMD GPUs](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-environment.MD)
