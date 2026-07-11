@@ -332,7 +332,7 @@ K8S manifest files:
 
 ### Test 1: TP8 KV Cache Transfer Performance Scaling with Prompt Length and KV Cache Size
 
-| Prompt Tokens | TTFT (ms) | KV Cache</BR>Transfer Latency (ms) | Overhead</BR>Transfer Latency / FFTT | KV Cache Size (MiB) | Throughput (GB/s) | Utilization |
+| Prompt Tokens | TTFT (ms) | KV Cache</BR>Transfer Latency (ms) | Overhead: </BR>Transfer Latency / FFTT | KV Cache Size (MiB) | Throughput (GB/s) | Utilization |
 |--------------:|----------:|-------------------------------:|------------------------:|--------------------:|------------------:|------------:|
 | 144           | 45.73     | 0.334                          | 0.7%                    | 20.248              | 60.584            | 15.1%       |
 | 272           | 47.91     | 0.342                          | 0.7%                    | 38.248              | 111.883           | 28.0%       |
@@ -368,7 +368,7 @@ The environment and configuration are similar to those used in [the official Moo
 All benchmarks use a 32,784-token prompt, generating approximately 4.5 GiB of KV cache. Based on the measured transfer latency and throughput, we can estimate the maximum supported QPS for each configuration.
 
 
-| TP | Prefill Instance | Interconnect                             | Decode Instance  | TTFT (ms) | KV Cache</BR>Transfer Latency (ms) | Overhead</BR>Transfer Latency / FFTT | Throughput (GB/s) | Link Capacity (GB/s) | Utilization |
+| TP | Prefill Instance | Interconnect                             | Decode Instance  | TTFT (ms) | KV Cache</BR>Transfer Latency (ms) | Overhead: </BR>Transfer Latency / FFTT | Throughput (GB/s) | Link Capacity (GB/s) | Utilization |
 | -: | ---------------- | ---------------------------------------- | ---------------- | --------: | -----------------------------: | ----------------------: | ----------------: | -------------------: | ----------: |
 |  8 | 8 GPUs           | 8 Rails                                  | 8 GPUs           |    814.90 |                         20.595 |               **2.53%** |           223.858 |                  400 |  **55.96%** |
 |  8 | 8 GPUs           | 4 Rails (0/2/4/6)                        | 8 GPUs           |    822.12 |                         26.602 |               **3.24%** |           173.304 |                  200 |  **86.65%** |
