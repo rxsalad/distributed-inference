@@ -424,7 +424,16 @@ Similar to the TP4 results, NUMA alignment remains important for maximizing KV c
 
 - [RDMA Sharing Implementation for DOKS](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-rdma-sharing.MD)
 - [Multi-Node Environment Setup and Testing for DOKS with AMD GPUs](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-environment.MD)
+
+- [Mooncake: Architecture](https://kvcache-ai.github.io/Mooncake/design/architecture.html)
+
 - [Mooncake: vLLM PD Disaggregation Performance](https://kvcache-ai.github.io/Mooncake/performance/vllm/vllm-v1-pd-performance.html)
 - [Mooncake: Transfer Engine](https://kvcache-ai.github.io/Mooncake/design/transfer-engine/index.html)
 
+- [Mooncake: vLLM Integration](https://kvcache-ai.github.io/Mooncake/getting_started/examples/vllm-integration/index.html)
+
 - [vLLM: Disaggregated Prefilling](https://docs.vllm.ai/en/stable/features/disagg_prefill/)
+
+- [vLLM: Paged Attention](https://docs.vllm.ai/en/latest/design/paged_attention/)
+
+- [vLLM: MooncakeConnector Usage Guide](https://docs.vllm.ai/en/stable/features/mooncake_connector_usage/#proxy)
