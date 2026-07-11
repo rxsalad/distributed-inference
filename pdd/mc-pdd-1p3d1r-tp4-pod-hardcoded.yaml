@@ -1,0 +1,567 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mc-pdd-router-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mc-pdd-router-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mc-pdd-router-rb
+subjects:
+  - kind: ServiceAccount
+    name: mc-pdd-router-sa
+roleRef:
+  kind: Role
+  name: mc-pdd-router-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc-pdd-router
+  labels:
+    app: mc-pdd-router
+spec:
+  restartPolicy: Always
+
+  volumes:
+    - name: temp-hf-cache
+      hostPath:
+        path: /root/.cache/huggingface
+        type: DirectoryOrCreate
+
+    - name: peer-info
+      emptyDir: {}
+
+  serviceAccountName: mc-pdd-router-sa
+
+  initContainers:
+    - name: waiter
+      image: bitnami/kubectl:latest
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+
+          echo "Waiting for mc-pdd-prefill1 and mc-pdd-decode1..."
+
+          while true; do
+            PREFILL_IP1=$(kubectl get pod mc-pdd-prefill1 -o jsonpath='{.status.podIP}' 2>/dev/null || true)
+            DECODE_IP1=$(kubectl get pod mc-pdd-decode1 -o jsonpath='{.status.podIP}' 2>/dev/null || true)
+            DECODE_IP2=$(kubectl get pod mc-pdd-decode2 -o jsonpath='{.status.podIP}' 2>/dev/null || true)
+            DECODE_IP3=$(kubectl get pod mc-pdd-decode3 -o jsonpath='{.status.podIP}' 2>/dev/null || true)
+
+            if [ -n "$PREFILL_IP1" ] && [ -n "$DECODE_IP1" ] && [ -n "$DECODE_IP2" ] && [ -n "$DECODE_IP3" ]; then
+              break
+            fi
+
+            sleep 2
+          done
+
+          echo "PREFILL_IP1=$PREFILL_IP1" > /peer-info/peers.env
+          echo "DECODE_IP1=$DECODE_IP1" >> /peer-info/peers.env
+          echo "DECODE_IP2=$DECODE_IP2" >> /peer-info/peers.env
+          echo "DECODE_IP3=$DECODE_IP3" >> /peer-info/peers.env
+
+          echo "PREFILL_IP1=$PREFILL_IP1"
+          echo "DECODE_IP1=$DECODE_IP1"
+          echo "DECODE_IP2=$DECODE_IP2"
+          echo "DECODE_IP3=$DECODE_IP3"
+          echo "vLLM workers are created."
+
+      volumeMounts:
+        - name: peer-info
+          mountPath: /peer-info
+
+  containers:
+    - name: router
+      image: vllm/vllm-openai-rocm:v0.21.0
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -ex
+
+          . /peer-info/peers.env
+
+          # apt update
+          # apt install -y iproute2 net-tools iputils-ping
+
+          echo "Waiting for Prefill vLLM..."
+          until curl -sf http://${PREFILL_IP1}:8010/health; do
+            sleep 2
+          done
+
+          echo "Waiting for Decode vLLM..."
+          until curl -sf http://${DECODE_IP1}:8020/health; do
+            sleep 2
+          done
+
+          echo "Waiting for Decode vLLM..."
+          until curl -sf http://${DECODE_IP2}:8020/health; do
+            sleep 2
+          done
+
+          echo "Waiting for Decode vLLM..."
+          until curl -sf http://${DECODE_IP3}:8020/health; do
+            sleep 2
+          done
+
+          echo "Both vLLM servers are ready."
+
+          cd vllm
+
+          sleep infinity
+
+          python examples/disaggregated/mooncake_connector/mooncake_connector_proxy.py \
+            --prefill http://${PREFILL_IP1}:8010 \
+            --decode http://${DECODE_IP1}:8020 \
+            --decode http://${DECODE_IP2}:8020 \
+            --decode http://${DECODE_IP3}:8020 \
+            --host 0.0.0.0 \
+            --port 8000
+
+
+          # ibv_devinfo -v | grep GID
+
+          # ip -br a
+          # rdma link
+          # ls /sys/class/infiniband/
+          # ibv_devices
+          # ibv_devinfo -v | grep GID
+           
+      volumeMounts:
+        - name: temp-hf-cache
+          mountPath: /root/.cache/huggingface
+
+        - name: peer-info
+          mountPath: /peer-info
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc-pdd-prefill1
+  labels:
+    app: mc-pdd-prefill1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: >-
+      ipvlan-fabric0@net0,
+      ipvlan-fabric1@net1,
+      ipvlan-fabric2@net2,
+      ipvlan-fabric3@net3,
+      ipvlan-fabric4@net4,
+      ipvlan-fabric5@net5,
+      ipvlan-fabric6@net6,
+      ipvlan-fabric7@net7
+spec:
+  restartPolicy: Always
+
+  nodeSelector:
+    doks.digitalocean.com/gpu-brand: amd
+
+  tolerations:
+    - key: amd.com/gpu
+      operator: Exists
+      effect: NoSchedule
+
+  volumes:
+    - name: temp-hf-cache
+      hostPath:
+        path: /root/.cache/huggingface
+        type: DirectoryOrCreate
+
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 128Gi
+
+  containers:
+    - name: server
+      image: vllm/vllm-openai-rocm:v0.21.0
+      imagePullPolicy: Always
+
+      ports:
+        - containerPort: 8010
+          name: http
+
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -ex
+
+          apt update
+          apt install -y iproute2 net-tools iputils-ping
+          apt install -y infiniband-diags ibverbs-utils
+          pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+          #MC_TE_METRIC=1 \
+          #MC_LOG_LEVEL=INFO \
+
+          # VLLM_LOGGING_LEVEL=DEBUG \
+
+          MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+          vllm serve Qwen/Qwen3-8B \
+           --no-enable-prefix-caching \
+           --tensor-parallel-size 4 \
+           --host 0.0.0.0 \
+           --port 8010 \
+           --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_producer"}'
+
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+
+      volumeMounts:
+        - name: temp-hf-cache
+          mountPath: /root/.cache/huggingface
+
+        - name: dshm
+          mountPath: /dev/shm
+
+      resources:
+        limits:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+        requests:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc-pdd-decode1
+  labels:
+    app: mc-pdd-decode1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: >-
+      ipvlan-fabric0@net0,
+      ipvlan-fabric1@net1,
+      ipvlan-fabric2@net2,
+      ipvlan-fabric3@net3,
+      ipvlan-fabric4@net4,
+      ipvlan-fabric5@net5,
+      ipvlan-fabric6@net6,
+      ipvlan-fabric7@net7
+spec:
+  restartPolicy: Always
+
+  nodeSelector:
+    doks.digitalocean.com/gpu-brand: amd
+
+  tolerations:
+    - key: amd.com/gpu
+      operator: Exists
+      effect: NoSchedule
+
+  volumes:
+    - name: temp-hf-cache
+      hostPath:
+        path: /root/.cache/huggingface
+        type: DirectoryOrCreate
+
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 128Gi
+
+  containers:
+    - name: server
+      image: vllm/vllm-openai-rocm:v0.21.0
+      imagePullPolicy: Always
+
+      ports:
+        - containerPort: 8020
+          name: http
+
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -ex
+
+          apt update
+          apt install -y iproute2 net-tools iputils-ping
+          apt install -y infiniband-diags ibverbs-utils
+          pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+          #MC_TE_METRIC=1 \
+          #MC_LOG_LEVEL=INFO \
+
+          #VLLM_LOGGING_LEVEL=DEBUG \
+          
+          MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+          vllm serve Qwen/Qwen3-8B \
+           --no-enable-prefix-caching \
+           --tensor-parallel-size 4 \
+           --host 0.0.0.0 \
+           --port 8020 \
+           --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_consumer"}'
+
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+
+      volumeMounts:
+        - name: temp-hf-cache
+          mountPath: /root/.cache/huggingface
+
+        - name: dshm
+          mountPath: /dev/shm
+
+      resources:
+        limits:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+        requests:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc-pdd-decode2
+  labels:
+    app: mc-pdd-decode2
+  annotations:
+    k8s.v1.cni.cncf.io/networks: >-
+      ipvlan-fabric0@net0,
+      ipvlan-fabric1@net1,
+      ipvlan-fabric2@net2,
+      ipvlan-fabric3@net3,
+      ipvlan-fabric4@net4,
+      ipvlan-fabric5@net5,
+      ipvlan-fabric6@net6,
+      ipvlan-fabric7@net7
+spec:
+  restartPolicy: Always
+
+  nodeSelector:
+    doks.digitalocean.com/gpu-brand: amd
+
+  tolerations:
+    - key: amd.com/gpu
+      operator: Exists
+      effect: NoSchedule
+
+  volumes:
+    - name: temp-hf-cache
+      hostPath:
+        path: /root/.cache/huggingface
+        type: DirectoryOrCreate
+
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 128Gi
+
+  containers:
+    - name: server
+      image: vllm/vllm-openai-rocm:v0.21.0
+      imagePullPolicy: Always
+
+      ports:
+        - containerPort: 8020
+          name: http
+
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -ex
+
+          apt update
+          apt install -y iproute2 net-tools iputils-ping
+          apt install -y infiniband-diags ibverbs-utils
+          pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+          #MC_TE_METRIC=1 \
+          #MC_LOG_LEVEL=INFO \
+
+          #VLLM_LOGGING_LEVEL=DEBUG \
+          
+          MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+          vllm serve Qwen/Qwen3-8B \
+           --no-enable-prefix-caching \
+           --tensor-parallel-size 4 \
+           --host 0.0.0.0 \
+           --port 8020 \
+           --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_consumer"}'
+
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+
+      volumeMounts:
+        - name: temp-hf-cache
+          mountPath: /root/.cache/huggingface
+
+        - name: dshm
+          mountPath: /dev/shm
+
+      resources:
+        limits:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+        requests:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mc-pdd-decode3
+  labels:
+    app: mc-pdd-decode3
+  annotations:
+    k8s.v1.cni.cncf.io/networks: >-
+      ipvlan-fabric0@net0,
+      ipvlan-fabric1@net1,
+      ipvlan-fabric2@net2,
+      ipvlan-fabric3@net3,
+      ipvlan-fabric4@net4,
+      ipvlan-fabric5@net5,
+      ipvlan-fabric6@net6,
+      ipvlan-fabric7@net7
+spec:
+  restartPolicy: Always
+
+  nodeSelector:
+    doks.digitalocean.com/gpu-brand: amd
+
+  tolerations:
+    - key: amd.com/gpu
+      operator: Exists
+      effect: NoSchedule
+
+  volumes:
+    - name: temp-hf-cache
+      hostPath:
+        path: /root/.cache/huggingface
+        type: DirectoryOrCreate
+
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 128Gi
+
+  containers:
+    - name: server
+      image: vllm/vllm-openai-rocm:v0.21.0
+      imagePullPolicy: Always
+
+      ports:
+        - containerPort: 8020
+          name: http
+
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -ex
+
+          apt update
+          apt install -y iproute2 net-tools iputils-ping
+          apt install -y infiniband-diags ibverbs-utils
+          pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+          #MC_TE_METRIC=1 \
+          #MC_LOG_LEVEL=INFO \
+
+          #VLLM_LOGGING_LEVEL=DEBUG \
+          
+          MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+          vllm serve Qwen/Qwen3-8B \
+           --no-enable-prefix-caching \
+           --tensor-parallel-size 4 \
+           --host 0.0.0.0 \
+           --port 8020 \
+           --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_consumer"}'
+
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+
+      volumeMounts:
+        - name: temp-hf-cache
+          mountPath: /root/.cache/huggingface
+
+        - name: dshm
+          mountPath: /dev/shm
+
+      resources:
+        limits:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
+        requests:
+          amd.com/gpu: "4"
+          rdma/fabric0: 10
+          rdma/fabric1: 10
+          rdma/fabric2: 10
+          rdma/fabric3: 10
+          rdma/fabric4: 10
+          rdma/fabric5: 10
+          rdma/fabric6: 10
+          rdma/fabric7: 10
