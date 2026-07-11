@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: host-device-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: host-device-demo
+  template:
+    metadata:
+      labels:
+        app: host-device-demo
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          roce-net-fabric0@fabric0,
+          roce-net-fabric1@fabric1,
+          roce-net-fabric2@fabric2,
+          roce-net-fabric3@fabric3,
+          roce-net-fabric4@fabric4,
+          roce-net-fabric5@fabric5,
+          roce-net-fabric6@fabric6,
+          roce-net-fabric7@fabric7
+    spec:
+      restartPolicy: Always
+      #hostNetwork: true
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: amd
+
+      tolerations:
+        - key: amd.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      volumes:
+        - name: temp-hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+
+        - name: dshm 
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+        - name: temp-python-script       
+          configMap:
+            name: mn-python-script
+
+      containers:
+
+        - name: server
+          image: rocm/pytorch:rocm7.2.2_ubuntu24.04_py3.12_pytorch_release_2.7.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http-example
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+             set -ex
+          
+             apt update
+             apt install -y iproute2 iputils-ping infiniband-diags ibverbs-utils net-tools
+             
+             #For MI350x8, to install userspace RDMA provider for AMD Pensando Pollara NICs, and not required for MI325x8
+             echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amdainic/pensando/ubuntu/1.117.1-a-63 noble main' > /etc/apt/sources.list.d/ainic.list    
+             apt update &&  apt install -y libionic1
+
+             exec sleep infinity 
+ 
+          securityContext:
+            #privileged: true 
+            capabilities:
+              add:
+              - IPC_LOCK
+
+          volumeMounts:
+            - name: temp-hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: dshm
+              mountPath: /dev/shm
+
+            - name: temp-python-script
+              mountPath: /p2p_bw_test.py
+              subPath: p2p_bw_test.py
+
+          resources:
+            limits:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+            requests:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
