@@ -309,7 +309,7 @@ INFO:     127.0.0.1:39160 - "POST /v1/completions HTTP/1.1" 200 OK
 ### Test Environment and Scripts
 
 ```
-DOKS version: 1.34.1-d0.2, RDMA Sharing enabled
+DOKS version: 1.34.1-do.2, RDMA Sharing enabled
 Hardware: 2 MI325x8 nodes, with 8 × 400 Gbps Rails
 
 Model: Qwen3-8B
