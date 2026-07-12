@@ -6,8 +6,6 @@ This guide provides a step-by-step walkthrough for deploying Prefill–Decode (P
 
 The guide also evaluates KV cache transfer performance across representative deployment scenarios, including TP1, TP4, and TP8 workloads in both intra-node and inter-node configurations, with NUMA-aligned and NUMA-misaligned GPU-to-NIC mappings. The benchmark results provide practical guidance for understanding performance characteristics and optimizing network planning and system design.
 
-<img src="pdd/tp4.png" alt="Latency" width="800" height="420"/>
-
 ## Concepts
 
 ### Prefill–Decode Disaggregation
@@ -407,6 +405,8 @@ NUMA misalignment significantly impacts transfer performance. Sharing interconne
 Adding additional rails without proper NUMA alignment does not necessarily improve performance. In this evaluation, the eight-rail configuration achieves lower throughput (144.3 GB/s) and lower link utilization (36.1%) compared with the NUMA-aligned four-rail configuration. This demonstrates that communication path affinity and latency can be more important than simply increasing the number of available rails.
 
 Compared with inter-node RDMA, the intra-node XGMI configuration achieves lower KV cache transfer performance in this evaluation. Despite its higher theoretical bandwidth, measured throughput reaches only 63.1 GB/s with 12.3% utilization, indicating potential optimization opportunities in the MTE data path for intra-node transfers.
+
+<img src="pdd/tp4.png" alt="Latency" width="800" height="420"/>
 
 For practical TP4 deployments, two configurations can be considered: 
 - Eight rails with flexible GPU/NIC placement, which improves deployment flexibility with a relatively small impact on TTFT.
