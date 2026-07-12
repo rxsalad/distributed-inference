@@ -406,14 +406,12 @@ Adding additional rails without proper NUMA alignment does not necessarily impro
 
 Compared with inter-node RDMA, the intra-node XGMI configuration achieves lower KV cache transfer performance in this evaluation. Despite its higher theoretical bandwidth, measured throughput reaches only 63.1 GB/s with 12.3% utilization, indicating potential optimization opportunities in the MTE data path for intra-node transfers.
 
+For practical TP4 deployments, two configurations can be considered: 
+
 <img src="pdd/tp4.png" alt="Latency" width="800" height="420"/>
 
-For practical TP4 deployments, two configurations can be considered: 
 - Eight rails with flexible GPU/NIC placement, which improves deployment flexibility with a relatively small impact on TTFT.
 - Four rails with NUMA-aligned GPU-to-NIC mappings, which provides the highest transfer performance but imposes stricter placement constraints.
-
-<img src="pdd/tp4.png" alt="Latency" width="800" height="420"/>
-
 
 #### TP1 Workloads
 
