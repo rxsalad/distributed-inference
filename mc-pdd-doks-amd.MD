@@ -6,6 +6,8 @@ This guide provides a step-by-step walkthrough for deploying Prefill–Decode (P
 
 The guide also evaluates KV cache transfer performance across representative deployment scenarios, including TP1, TP4, and TP8 workloads in both intra-node and inter-node configurations, with NUMA-aligned and NUMA-misaligned GPU-to-NIC mappings. The benchmark results provide practical guidance for understanding performance characteristics and optimizing network planning and system design.
 
+<img src="pdd/tp4.png" alt="Latency" width="800" height="420"/>
+
 ## Concepts
 
 ### Prefill–Decode Disaggregation
