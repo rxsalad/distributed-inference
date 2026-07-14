@@ -2,7 +2,7 @@
 
 Follow [amd-mn-k8s-environment](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-environment.MD) and [amd-mn-k8s-rdma-sharing.MD](https://github.com/rxsalad/multi-node-solutions/blob/main/amd-mn-k8s-rdma-sharing.MD) to prepare the environment before proceeding. The setup requires two DOKS workers with 16 GPUs and RDMA/RoCE support. Ensure that Multus CNI, ipvlan CNI, and Whereabouts IPAM CNI are installed and configured.
 
-This guide provides a step-by-step walkthrough for deploying KV cache sharing with vLLM and the MooncakeStoreConnector on DOKS. Using an RDMA-enabled infrastructure, multiple vLLM workers across DOKS nodes can publish and retrieve cached KV blocks through [a centralized or distributed Mooncake store](https://kvcache-ai.github.io/Mooncake/design/mooncake-store.html#architecture). This architecture enables efficient KV cache sharing across workers, reduces redundant prompt prefill computation, improves GPU utilization, and lowers TTFT for requests with shared prompt prefixes.
+This guide provides a step-by-step walkthrough for deploying KV cache sharing with vLLM and the MooncakeStoreConnector on DOKS. Using an RDMA-enabled infrastructure, multiple vLLM workers across DOKS nodes can publish and retrieve cached KV blocks through a centralized or distributed Mooncake store. This architecture enables efficient KV cache sharing across workers, reduces redundant prompt prefill computation, improves GPU utilization, and lowers TTFT for requests with shared prompt prefixes.
 
 See [mc-pdd-doks-amd.MD](mc-pdd-doks-amd.MD#vllm-mooncake-integration) for a guide to deploying Prefill–Decode (PD) Disaggregation with vLLM and MooncakeConnector. KV cache sharing and transfer with PD Disaggregation will be covered in a separate guide.
 
@@ -50,7 +50,7 @@ Both the Master Service and Metadata Service communicate over the pod's eth0 net
 
 A dedicated Mooncake Store Service (or a small cluster of dedicated store services) owns and manages the shared memory pool for all vLLM workers. The store service registers with the Mooncake Master Service and Metadata Service to provide storage resources and metadata management.
 
-The store service acts as a storage provider only, and there are no local vLLM workers that directly access the store through Store API operations such as Put() and Get(). Instead, all KV cache transfers are performed remotely by the Mooncake Transfer Engine (MTE) over RDMA/RoCE.
+The store service acts as a storage provider only, and there are no local vLLM workers that directly access the store through Store API operations such as Put() and Get(). Instead, all KV cache transfers are performed remotely by MTE over RDMA/RoCE.
 
 ``` Python
 # CPU Pod with RDMA/RoCE access: Mooncake Store
@@ -138,14 +138,13 @@ With prefix caching enabled, vLLM keeps KV cache entries locally after request c
 
 When Mooncake is used as an external KV cache layer, eviction from GPU memory does not necessarily mean the KV cache is lost. If the same prefix is requested again, Mooncake can restore the KV cache back to GPU memory, avoiding full recomputation of the prompt prefix.
 
-
 ### Implementation
 
 Refer to [sharing/mc-sharing-centralized-store.yaml](sharing/mc-sharing-centralized-store.yaml) for the details. It provisions one Mooncake master CPU pod and one dedicated store CPU pod with exclusive RDMA/RoCE access on one DOKS worker node (assuming no other applications share these resources). It also provisions two 4-GPU vLLM worker pods that share RDMA/RoCE access on another DOKS worker node.
 
 The deployment uses two wrapper scripts:
 
-- [sharing/store.py](sharing/store.py) retrieves the Mooncake Master IP address, registers the store with the Mooncake Master Service and Metadata Service, and runs it as a dedicated store service. The script uses the vLLM-based container image to avoid separately installing the required RDMA/RoCE libraries, although vLLM itself is not required by the dedicated store service.
+- [sharing/store.py](sharing/store.py) retrieves the Mooncake Master IP address, registers the store with the Mooncake Master Service and Metadata Service, and runs it as a dedicated store service. The vLLM-based container image is used only to provide the required RDMA/RoCE libraries and runtime dependencies; vLLM itself is not required or used by the dedicated store service.
 
 - [sharing/worker.py](sharing/worker.py) retrieves the Mooncake Master IP address, generates the mooncake_config.json file, and then starts the vLLM worker instance with the appropriate Mooncake configuration.
 
@@ -185,8 +184,7 @@ mc-worker-0          1/1     Running   0          78s   10.119.0.165   rs-mn-mi3
 mc-worker-1          1/1     Running   0          73s   10.119.0.209   rs-mn-mi325x8-pool-3c35jt     <none>           <none>
 ```
 
-
-The first run is handled by mc-worker-0, with an external prefix cache hit rate of 0.0% and an FFFT of 1109.94 ms.
+In the first run, the request is processed by **mc-worker-0**. Since no external prefix cache is available, the external prefix cache hit rate is 0.0%, resulting in a TTFT of 1109.94 ms.
 
 ``` bash
 # NodePort - 167.99.176.197:30080
@@ -225,7 +223,7 @@ P99 ITL (ms):                            4.00
 (APIServer pid=1) INFO 07-13 23:54:02 [loggers.py:271] Engine 000: Avg prompt throughput: 2.1 tokens/s, Avg generation throughput: 32.4 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 0.0%
 ```
 
-The second run is handled by mc-worker-1, with an external prefix cache hit rate of 50.0% and an FFFT of 361.40 ms.
+For the second run, the same request is handled by **mc-worker-1**. The external prefix cache hit rate increases to 50.0%, reducing the TTFT to 361.40 ms.
 
 ``` bash
 # vllm bench serve --host 167.99.176.197 --port 30080 --seed "1" \
@@ -264,7 +262,7 @@ P99 ITL (ms):                            3.79
 (APIServer pid=1) INFO 07-13 23:46:28 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 50.0%
 ```
 
-The Mooncake master logs show 9 connected clients, including 1 store client and 2 TP4 vLLM workers (8 TP clients total). The store maintains 8,200 KV cache keys in memory, using 4.5 GB of 160 GB DRAM with no SSD tier enabled. Successful Get and ExistKey operations confirm KV cache lookup and reuse across vLLM workers, with no eviction required.
+The Mooncake master logs show 9 connected clients, including 1 store client and 2 TP4 vLLM workers (8 TP clients total). The store maintains 8,200 KV cache keys in memory, using 4.5 GB of 160 GB DRAM with no SSD tier enabled. 
 
 ```
 {Mem Storage: 4.50 GB / 160.00 GB (2.8%) | NVMe-oF SSD: 0 B / 0 B | SSD Storage: 0 B / 0 B | Keys: 8200 (soft-pinned: 0) | Clients: 9 | Requests (Success/Total per sec): PutStart=0.00/0.00, PutEnd=0.00/0.00, PutRevoke=0.00/0.00, Get=0.00/0.00, Exist=0.00/0.00, Del=0.00/0.00, DelAll=0.00/0.00, Ping=9.00/9.00, CopyStart=0.00/0.00, CopyEnd=0.00/0.00, CopyRevoke=0.00/0.00, MoveStart=0.00/0.00, MoveEnd=0.00/0.00, MoveRevoke=0.00/0.00, EvictDiskReplica=0.00/0.00 | Batch Requests (per sec, Req=Success/PartialSuccess/Total, Item=Success/Total): PutStart:(Req=0.00/0.00/0.00, Item=0.00/0.00), PutEnd:(Req=0.00/0.00/0.00, Item=0.00/0.00), PutRevoke:(Req=0.00/0.00/0.00, Item=0.00/0.00), Get:(Req=0.40/0.00/0.40, Item=819.17/819.17), ExistKey:(Req=0.90/0.00/0.90, Item=2457.51/2457.51), QueryIp:(Req=0.00/0.00/0.00, Item=0.00/0.00), Clear:(Req=0.00/0.00/0.00, Item=0.00/0.00), CreateMoveTask:(Req=0.00/0.00), CreateCopyTask:(Req=0.00/0.00), QueryTask:(Req=0.00/0.00), FetchTasks:(Req=9.00/9.00), MarkTaskToComplete:(Req=0.00/0.00) | Eviction: Success/Attempts=0/0, AllocFail=0, keys=0, size=0 B | Mem Eviction: Success/Attempts=0/0, keys=0, size=0 B | NoF Eviction: Success/Attempts=0/0, keys=0, size=0 B | Discard: Released/Total=0/0, StagingSize=0 B | Snapshots: Success=0, Fail=0}, ha={HA Metrics Summary: last_seq=0, applied_seq=0, lag=0, pending=0, mutation_queue=0, batch_commits=0, sync_commits=0, skipped=0, checksum_fail=0, etcd_fail=0, watch_disconn=0, state=0}
@@ -275,7 +273,6 @@ The Mooncake master logs show 9 connected clients, including 1 store client and 
 Each vLLM worker embeds a Mooncake Store instance and contributes its local CPU memory to a shared KV cache pool. The workers collectively provide the storage resources while serving inference requests. 
 
 This embedded architecture tightly integrates KV cache management with inference, simplifies deployment by eliminating dedicated storage infrastructure, and scales storage capacity with the inference cluster. However, compute and storage resources are coupled, limiting independent scaling and making worker failures or maintenance events affect cache availability.
-
 
 ### Architecture
 
@@ -288,7 +285,6 @@ The Master Service and Metadata Service remain unchanged. The dedicated Store Se
 The vLLM workers act as both inference clients and KV cache storage providers. Through MooncakeStoreConnector, they store KV caches in and retrieve them from their local embedded Mooncake store. If a requested KV cache is not available locally, the connector and MTE transparently locate the remote copy and transfer it from the corresponding embedded Mooncake store.
 
 Both MooncakeStoreConnector and the embedded Mooncake store rely on MTE for KV cache lookup and data transfer. When a requested KV cache is not available locally, MTE locates the remote copy through the Metadata Service and transfers it directly between embedded Mooncake stores on different vLLM workers.
-
 
 ``` Python
 # GPU Pod with RDMA/RoCE access: vLLM with MooncakeStoreConnector
@@ -322,7 +318,7 @@ Refer to [sharing/mc-sharing-distributed-store.yaml](sharing/mc-sharing-distribu
 
 The deployment uses one wrapper script:
 
-- [sharing/store-worker.py](sharing/worker.py) retrieves the Mooncake Master IP address, generates the mooncake_config.json file, and then starts the vLLM worker instance with the appropriate Mooncake configuration.
+- [sharing/store-worker.py](sharing/store-worker.py) retrieves the Mooncake Master IP address, generates the mooncake_config.json file, and then starts the vLLM worker instance with the appropriate Mooncake configuration.
 
 ``` bash
 kubectl create configmap rs-store-worker-script --from-file=sharing/store-worker.py
@@ -351,7 +347,7 @@ mc-worker-0   1/1     Running   0          32m   10.119.1.39    rs-mn-mi325x8-po
 mc-worker-1   1/1     Running   0          32m   10.119.0.253   rs-mn-mi325x8-pool-3c35jt     <none>           <none>
 ```
 
-The first run is handled by mc-worker-1, with an external prefix cache hit rate of 0.0% and an TTFT of 1099.10 ms.
+In the first run, the request is processed by **mc-worker-1**. Since no external prefix cache is available, the external prefix cache hit rate is 0.0%, resulting in a TTFT of 1099.10 ms.
 
 ``` bash
 # NodePort - 167.99.176.197:30080
@@ -390,7 +386,7 @@ P99 ITL (ms):                            3.89
 (APIServer pid=1) INFO 07-14 00:28:12 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 0.0%
 ```
 
-The second run is handled by mc-worker-0, with an external prefix cache hit rate of 50.0% and an TTFT of 475.54 ms.
+For the second run, the same request is handled by **mc-worker-0**. The external prefix cache hit rate increases to 50.0%, reducing the TTFT to 475.54 ms.
 
 ``` bash
 # vllm bench serve --host 167.99.176.197 --port 30080 --seed "1" \
@@ -427,6 +423,12 @@ P99 ITL (ms):                            3.79
 # Server logs: mc-worker-0
 
 (APIServer pid=1) INFO 07-14 00:29:43 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 50.0%
+```
+
+The Mooncake Master logs show 8 connected clients from 2 store-embedded TP4 vLLM workers. The embedded stores maintain 8,200 KV cache keys in memory, using 4.50 GB of 640 GB DRAM (0.7%), with no SSD tier enabled.
+
+```
+I0714 02:04:33.758602   592 rpc_service.cpp:265] Master Admin Metrics: role=leader, state=serving, service_ready=true, master={Mem Storage: 4.50 GB / 640.00 GB (0.7%) | NVMe-oF SSD: 0 B / 0 B | SSD Storage: 0 B / 0 B | Keys: 8200 (soft-pinned: 0) | Clients: 8 | Requests (Success/Total per sec): PutStart=0.00/0.00, PutEnd=0.00/0.00, PutRevoke=0.00/0.00, Get=0.00/0.00, Exist=0.00/0.00, Del=0.00/0.00, DelAll=0.00/0.00, Ping=8.00/8.00, CopyStart=0.00/0.00, CopyEnd=0.00/0.00, CopyRevoke=0.00/0.00, MoveStart=0.00/0.00, MoveEnd=0.00/0.00, MoveRevoke=0.00/0.00, EvictDiskReplica=0.00/0.00 | Batch Requests (per sec, Req=Success/PartialSuccess/Total, Item=Success/Total): PutStart:(Req=0.00/0.00/0.00, Item=0.00/0.00), PutEnd:(Req=0.00/0.00/0.00, Item=0.00/0.00), PutRevoke:(Req=0.00/0.00/0.00, Item=0.00/0.00), Get:(Req=0.00/0.00/0.00, Item=0.00/0.00), ExistKey:(Req=0.00/0.00/0.00, Item=0.00/0.00), QueryIp:(Req=0.00/0.00/0.00, Item=0.00/0.00), Clear:(Req=0.00/0.00/0.00, Item=0.00/0.00), CreateMoveTask:(Req=0.00/0.00), CreateCopyTask:(Req=0.00/0.00), QueryTask:(Req=0.00/0.00), FetchTasks:(Req=8.00/8.00), MarkTaskToComplete:(Req=0.00/0.00) | Eviction: Success/Attempts=0/0, AllocFail=0, keys=0, size=0 B | Mem Eviction: Success/Attempts=0/0, keys=0, size=0 B | NoF Eviction: Success/Attempts=0/0, keys=0, size=0 B | Discard: Released/Total=0/0, StagingSize=0 B | Snapshots: Success=0, Fail=0}, ha={HA Metrics Summary: last_seq=0, applied_seq=0, lag=0, pending=0, mutation_queue=0, batch_commits=0, sync_commits=0, skipped=0, checksum_fail=0, etcd_fail=0, watch_disconn=0, state=0}
 ```
 
 ## Documentation and Resources 
