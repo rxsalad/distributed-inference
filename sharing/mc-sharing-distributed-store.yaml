@@ -1,0 +1,220 @@
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mc-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mc-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mc-rb
+subjects:
+  - kind: ServiceAccount
+    name: mc-sa
+roleRef:
+  kind: Role
+  name: mc-role
+  apiGroup: rbac.authorization.k8s.io
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-master
+  template:
+    metadata:
+      labels:
+        app: mc-master
+    spec:
+      serviceAccountName: mc-sa
+
+      containers:
+        - name: master
+          image: vllm/vllm-openai-rocm:v0.21.0
+          imagePullPolicy: Always
+
+          command:
+            - /bin/bash
+            - -ec
+          args:
+            - |
+              set -euo pipefail
+
+              apt update
+              apt install -y iproute2 net-tools iputils-ping 
+
+              pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.11.post1
+
+              # sleep infinity
+
+              mooncake_master --port 50051 \
+                --enable_http_metadata_server=true \
+                --http_metadata_server_host=0.0.0.0 \
+                --http_metadata_server_port=8080
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc-worker-service
+spec:
+  type: NodePort
+  selector:
+    app: mc-worker
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080
+---
+      
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mc-worker
+  template:
+    metadata:
+      labels:
+        app: mc-worker
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          ipvlan-fabric0@net0,
+          ipvlan-fabric1@net1,
+          ipvlan-fabric2@net2,
+          ipvlan-fabric3@net3,
+          ipvlan-fabric4@net4,
+          ipvlan-fabric5@net5,
+          ipvlan-fabric6@net6,
+          ipvlan-fabric7@net7
+    spec:
+      restartPolicy: Always
+      serviceAccountName: mc-sa
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: amd
+
+      tolerations:
+        - key: amd.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      volumes:
+        - name: temp-hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+        - name: temp-python-script       
+          configMap:
+            name: rs-store-worker-script
+
+      containers:
+        - name: server
+          image: vllm/vllm-openai-rocm:v0.21.0
+          imagePullPolicy: Always
+
+          env:
+          - name: MASTER_APP
+            value: "mc-master"
+
+          ports:
+            - containerPort: 8000
+              name: http
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -ex
+
+              apt update
+              apt install -y iproute2 net-tools iputils-ping 
+              apt install -y infiniband-diags ibverbs-utils
+              pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.11.post1
+              pip install --no-cache-dir kubernetes requests
+
+              python /app/store-worker.py
+
+              # sleep infinity
+
+              # MC_IB_PCI_RELAXED_ORDERING=1 \
+              # MC_NUM_QP_PER_EP=4 \
+              # MC_TE_METRIC=1 \
+
+              MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+              MOONCAKE_CONFIG_PATH=mooncake_config.json \
+              vllm serve Qwen/Qwen3-8B \
+                --no-enable-prefix-caching \
+                --tensor-parallel-size 4 \
+                --host 0.0.0.0 \
+                --port 8000 \
+                --kv-transfer-config '{"kv_connector":"MooncakeStoreConnector","kv_role":"kv_both"}'
+
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+
+          volumeMounts:
+            - name: temp-hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: dshm
+              mountPath: /dev/shm
+
+            - name: temp-python-script
+              mountPath: /app/store-worker.py
+              subPath: store-worker.py
+
+          resources:
+            limits:
+              amd.com/gpu: "4"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+            requests:
+              amd.com/gpu: "4"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+
+
+
+
+
