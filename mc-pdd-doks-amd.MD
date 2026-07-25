@@ -323,6 +323,7 @@ Mooncake settings:
 
 K8S manifest files:
   pdd/mc-pdd-1P1D1R-tp8-8rails.yaml
+  pdd/mc-pdd-1P1D1R-tp4-tp8-8rails.yaml (TP Mismatch: TP4 -> TP8)
   pdd/mc-pdd-1P1D1R-tp8-4rails.yaml
   pdd/mc-pdd-1P1D1R-tp8-2rails.yaml
   pdd/mc-pdd-1P3D1R-tp4-8rails.yaml
