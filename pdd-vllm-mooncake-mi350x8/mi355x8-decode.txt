@@ -1,0 +1,803 @@
+root@rs-dev-droplet:~# kubectl logs -f mc-pdd-decode-0 
++ apt update
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Get:1 https://repo.radeon.com/amdainic/pensando/ubuntu/1.117.3-hydra jammy InRelease [2321 B]
+Get:2 https://repo.radeon.com/amdgpu/30.30.3/ubuntu jammy InRelease [3185 B]
+Get:3 https://repo.radeon.com/rocm/apt/7.2.3 jammy InRelease [2605 B]
+Get:4 https://repo.radeon.com/amdainic/pensando/ubuntu/1.117.3-hydra jammy/main amd64 Packages [3369 B]
+Get:5 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:6 http://archive.ubuntu.com/ubuntu jammy InRelease [270 kB]
+Get:7 https://repo.radeon.com/amdgpu/30.30.3/ubuntu jammy/main amd64 Packages [1331 B]
+Get:8 https://packages.broadcom.com/artifactory/ethernet-nic-debian-public jammy InRelease [2367 B]
+Get:9 https://repo.radeon.com/rocm/apt/7.2.3 jammy/main amd64 Packages [81.1 kB]
+Get:10 https://packages.broadcom.com/artifactory/ethernet-nic-debian-public jammy/main amd64 Packages [799 B]
+Get:11 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [4190 kB]
+Get:12 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy InRelease [18.1 kB]
+Get:13 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:14 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 Packages [44.9 kB]
+Get:15 http://archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Get:16 http://archive.ubuntu.com/ubuntu jammy/universe amd64 Packages [17.5 MB]
+Get:17 http://archive.ubuntu.com/ubuntu jammy/restricted amd64 Packages [164 kB]
+Get:18 http://archive.ubuntu.com/ubuntu jammy/main amd64 Packages [1792 kB]
+Get:19 http://archive.ubuntu.com/ubuntu jammy/multiverse amd64 Packages [266 kB]
+Get:20 http://archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [7836 kB]
+Get:21 http://archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 Packages [92.7 kB]
+Get:22 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1616 kB]
+Get:23 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [4524 kB]
+Get:24 http://archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [82.8 kB]
+Get:25 http://archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [35.6 kB]
+Get:26 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [84.1 kB]
+Get:27 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1314 kB]
+Get:28 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [7545 kB]
+Fetched 47.8 MB in 14s (3465 kB/s)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+49 packages can be upgraded. Run 'apt list --upgradable' to see them.
+W: https://repo.radeon.com/amdgpu/30.30.3/ubuntu/dists/jammy/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+W: https://repo.radeon.com/rocm/apt/7.2.3/dists/jammy/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
++ apt install -y iproute2 net-tools iputils-ping
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libatm1 libbpf0 libmnl0 libxtables12
+Suggested packages:
+  iproute2-doc
+The following NEW packages will be installed:
+  iproute2 iputils-ping libatm1 libbpf0 libmnl0 libxtables12 net-tools
+0 upgraded, 7 newly installed, 0 to remove and 49 not upgraded.
+Need to get 1527 kB of archives.
+After this operation, 4518 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libbpf0 amd64 1:0.5.0-1ubuntu22.04.1 [140 kB]
+Get:2 http://archive.ubuntu.com/ubuntu jammy/main amd64 libmnl0 amd64 1.0.4-3build2 [13.2 kB]
+Get:3 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libxtables12 amd64 1.8.7-1ubuntu5.2 [31.3 kB]
+Get:4 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 iproute2 amd64 5.15.0-1ubuntu2.2 [1072 kB]
+Get:5 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 iputils-ping amd64 3:20211215-1ubuntu0.1 [43.0 kB]
+Get:6 http://archive.ubuntu.com/ubuntu jammy/main amd64 libatm1 amd64 1:2.5.1-4build2 [22.8 kB]
+Get:7 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 net-tools amd64 1.60+git20181103.0eebece-1ubuntu5.4 [204 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 1527 kB in 1s (1124 kB/s)
+Selecting previously unselected package libbpf0:amd64.
+(Reading database ... 59138 files and directories currently installed.)
+Preparing to unpack .../0-libbpf0_1%3a0.5.0-1ubuntu22.04.1_amd64.deb ...
+Unpacking libbpf0:amd64 (1:0.5.0-1ubuntu22.04.1) ...
+Selecting previously unselected package libmnl0:amd64.
+Preparing to unpack .../1-libmnl0_1.0.4-3build2_amd64.deb ...
+Unpacking libmnl0:amd64 (1.0.4-3build2) ...
+Selecting previously unselected package libxtables12:amd64.
+Preparing to unpack .../2-libxtables12_1.8.7-1ubuntu5.2_amd64.deb ...
+Unpacking libxtables12:amd64 (1.8.7-1ubuntu5.2) ...
+Selecting previously unselected package iproute2.
+Preparing to unpack .../3-iproute2_5.15.0-1ubuntu2.2_amd64.deb ...
+Unpacking iproute2 (5.15.0-1ubuntu2.2) ...
+Selecting previously unselected package iputils-ping.
+Preparing to unpack .../4-iputils-ping_3%3a20211215-1ubuntu0.1_amd64.deb ...
+Unpacking iputils-ping (3:20211215-1ubuntu0.1) ...
+Selecting previously unselected package libatm1:amd64.
+Preparing to unpack .../5-libatm1_1%3a2.5.1-4build2_amd64.deb ...
+Unpacking libatm1:amd64 (1:2.5.1-4build2) ...
+Selecting previously unselected package net-tools.
+Preparing to unpack .../6-net-tools_1.60+git20181103.0eebece-1ubuntu5.4_amd64.deb ...
+Unpacking net-tools (1.60+git20181103.0eebece-1ubuntu5.4) ...
+Setting up net-tools (1.60+git20181103.0eebece-1ubuntu5.4) ...
+Setting up libatm1:amd64 (1:2.5.1-4build2) ...
+Setting up libmnl0:amd64 (1.0.4-3build2) ...
+Setting up libxtables12:amd64 (1.8.7-1ubuntu5.2) ...
+Setting up libbpf0:amd64 (1:0.5.0-1ubuntu22.04.1) ...
+Setting up iputils-ping (3:20211215-1ubuntu0.1) ...
+Setting up iproute2 (5.15.0-1ubuntu2.2) ...
+Processing triggers for libc-bin (2.35-0ubuntu3.13) ...
++ apt install -y infiniband-diags ibverbs-utils
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libibmad5 libibnetdisc5 libibumad3
+The following NEW packages will be installed:
+  ibverbs-utils infiniband-diags libibmad5 libibnetdisc5 libibumad3
+0 upgraded, 5 newly installed, 0 to remove and 49 not upgraded.
+Need to get 397 kB of archives.
+After this operation, 1642 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu jammy/universe amd64 ibverbs-utils amd64 39.0-1 [57.3 kB]
+Get:2 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibumad3 amd64 39.0-1 [28.4 kB]
+Get:3 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibmad5 amd64 39.0-1 [43.7 kB]
+Get:4 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibnetdisc5 amd64 39.0-1 [32.6 kB]
+Get:5 http://archive.ubuntu.com/ubuntu jammy/universe amd64 infiniband-diags amd64 39.0-1 [235 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 397 kB in 1s (362 kB/s)
+Selecting previously unselected package ibverbs-utils.
+(Reading database ... 59405 files and directories currently installed.)
+Preparing to unpack .../ibverbs-utils_39.0-1_amd64.deb ...
+Unpacking ibverbs-utils (39.0-1) ...
+Selecting previously unselected package libibumad3:amd64.
+Preparing to unpack .../libibumad3_39.0-1_amd64.deb ...
+Unpacking libibumad3:amd64 (39.0-1) ...
+Selecting previously unselected package libibmad5:amd64.
+Preparing to unpack .../libibmad5_39.0-1_amd64.deb ...
+Unpacking libibmad5:amd64 (39.0-1) ...
+Selecting previously unselected package libibnetdisc5:amd64.
+Preparing to unpack .../libibnetdisc5_39.0-1_amd64.deb ...
+Unpacking libibnetdisc5:amd64 (39.0-1) ...
+Selecting previously unselected package infiniband-diags.
+Preparing to unpack .../infiniband-diags_39.0-1_amd64.deb ...
+Unpacking infiniband-diags (39.0-1) ...
+Setting up libibumad3:amd64 (39.0-1) ...
+Setting up libibmad5:amd64 (39.0-1) ...
+Setting up ibverbs-utils (39.0-1) ...
+Setting up libibnetdisc5:amd64 (39.0-1) ...
+Setting up infiniband-diags (39.0-1) ...
+Processing triggers for libc-bin (2.35-0ubuntu3.13) ...
++ pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.12.post1
+Collecting mooncake-transfer-engine-non-cuda==0.3.12.post1
+  Downloading mooncake_transfer_engine_non_cuda-0.3.12.post1-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (33 kB)
+Requirement already satisfied: aiohttp in /usr/local/lib/python3.12/dist-packages (from mooncake-transfer-engine-non-cuda==0.3.12.post1) (3.14.3)
+Requirement already satisfied: requests in /usr/local/lib/python3.12/dist-packages (from mooncake-transfer-engine-non-cuda==0.3.12.post1) (2.34.2)
+Requirement already satisfied: msgpack in /usr/local/lib/python3.12/dist-packages (from mooncake-transfer-engine-non-cuda==0.3.12.post1) (1.2.1)
+Requirement already satisfied: aiohappyeyeballs>=2.5.0 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (2.7.1)
+Requirement already satisfied: aiosignal>=1.4.0 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (1.4.0)
+Requirement already satisfied: attrs>=17.3.0 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (26.1.0)
+Requirement already satisfied: frozenlist>=1.1.1 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (1.8.0)
+Requirement already satisfied: multidict<7.0,>=4.5 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (6.7.1)
+Requirement already satisfied: propcache>=0.2.0 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (0.5.2)
+Requirement already satisfied: typing_extensions>=4.4 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (4.16.0)
+Requirement already satisfied: yarl<2.0,>=1.17.0 in /usr/local/lib/python3.12/dist-packages (from aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (1.24.5)
+Requirement already satisfied: idna>=2.0 in /usr/local/lib/python3.12/dist-packages (from yarl<2.0,>=1.17.0->aiohttp->mooncake-transfer-engine-non-cuda==0.3.12.post1) (3.18)
+Requirement already satisfied: charset_normalizer<4,>=2 in /usr/local/lib/python3.12/dist-packages (from requests->mooncake-transfer-engine-non-cuda==0.3.12.post1) (3.4.9)
+Requirement already satisfied: urllib3<3,>=1.26 in /usr/local/lib/python3.12/dist-packages (from requests->mooncake-transfer-engine-non-cuda==0.3.12.post1) (2.7.0)
+Requirement already satisfied: certifi>=2023.5.7 in /usr/local/lib/python3.12/dist-packages (from requests->mooncake-transfer-engine-non-cuda==0.3.12.post1) (2026.7.22)
+Downloading mooncake_transfer_engine_non_cuda-0.3.12.post1-cp312-cp312-manylinux_2_28_x86_64.whl (44.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.5/44.5 MB 178.2 MB/s  0:00:00
+Installing collected packages: mooncake-transfer-engine-non-cuda
+Successfully installed mooncake-transfer-engine-non-cuda-0.3.12.post1
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 26.1.2 -> 26.2.1
+[notice] To update, run: python3.12 -m pip install --upgrade pip
++ MC_LOG_LEVEL=INFO
++ MC_TE_FILTERS=ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
++ MC_IB_PCI_RELAXED_ORDERING=1
++ MC_NUM_QP_PER_EP=2
++ MC_ENABLE_DEST_DEVICE_AFFINITY=1
++ vllm serve Qwen/Qwen3-8B --gpu-memory-utilization 0.80 --no-enable-prefix-caching --tensor-parallel-size 8 --host 0.0.0.0 --port 8020 --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_consumer"}'
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345] 
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345]        █     █     █▄   ▄█
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.26.0
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345]   █▄█▀ █     █     █     █  model   Qwen/Qwen3-8B
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:345] 
+(APIServer pid=1) INFO 08-06 16:32:24 [api_utils.py:273] non-default args: {'model_tag': 'Qwen/Qwen3-8B', 'host': '0.0.0.0', 'port': 8020, 'model': 'Qwen/Qwen3-8B', 'tensor_parallel_size': 8, 'gpu_memory_utilization': 0.8, 'enable_prefix_caching': False, 'kv_transfer_config': KVTransferConfig(kv_connector='MooncakeConnector', engine_id='2cb53100-8a92-4102-b515-1d2238c6d263', kv_buffer_device='cuda', kv_buffer_size=1000000000.0, kv_role='kv_consumer', kv_rank=None, kv_parallel_size=1, kv_ip='127.0.0.1', kv_port=14579, kv_connector_extra_config={}, kv_connector_module_path=None, enable_permute_local_kv=False, kv_load_failure_policy='fail')}
+(APIServer pid=1) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(APIServer pid=1) INFO 08-06 16:32:31 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+(APIServer pid=1) INFO 08-06 16:32:31 [model.py:1788] Using max model len 40960
+(APIServer pid=1) INFO 08-06 16:32:31 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=8192.
+(APIServer pid=1) INFO 08-06 16:32:31 [vllm.py:1109] Asynchronous scheduling is enabled.
+(APIServer pid=1) INFO 08-06 16:32:31 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=1311) INFO 08-06 16:32:38 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='Qwen/Qwen3-8B', speculative_config=None, tokenizer='Qwen/Qwen3-8B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=40960, download_dir=None, load_format=auto, tensor_parallel_size=8, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=Qwen/Qwen3-8B, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+sparse_attn_indexer', 'none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_mla_dual_rms_norm': False, 'fuse_rope_kvcache': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=1311) WARNING 08-06 16:32:38 [multiproc_executor.py:1070] Reducing Torch parallelism from 192 threads to 1 to avoid unnecessary CPU contention. Set OMP_NUM_THREADS in the external environment to tune this value as needed.
+(EngineCore pid=1311) INFO 08-06 16:32:38 [multiproc_executor.py:140] DP group leader: node_rank=0, node_rank_within_dp=0, master_addr=127.0.0.1, mq_connect_ip=10.135.2.237 (local), world_size=8, local_world_size=8
+(Worker pid=1575) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=1 local_rank=1 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1579) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=5 local_rank=5 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1580) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=6 local_rank=6 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1578) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=4 local_rank=4 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1576) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=2 local_rank=2 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1577) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=3 local_rank=3 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1574) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=0 local_rank=0 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1581) INFO 08-06 16:32:45 [parallel_state.py:1615] world_size=8 rank=7 local_rank=7 distributed_init_method=tcp://127.0.0.1:57855 backend=nccl
+(Worker pid=1574) INFO 08-06 16:32:46 [pynccl.py:113] vLLM is using nccl==2.27.7
+(Worker pid=1574) INFO 08-06 16:32:58 [cuda_communicator.py:264] Using ['CUSTOM', 'PYNCCL'] all-reduce backends (in dispatch order) for group 'tp:0' out of potential backends: ['NCCL_SYMM_MEM', 'QUICK_REDUCE', 'FLASHINFER', 'AITER_CUSTOM', 'CUSTOM', 'SYMM_MEM', 'PYNCCL'].
+(Worker pid=1574) INFO 08-06 16:32:58 [parallel_state.py:1946] rank 0 in world size 8 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(Worker pid=1574) INFO 08-06 16:32:58 [gpu_worker.py:378] Using V2 Model Runner
+(Worker_TP2 pid=1576) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP4 pid=1578) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP6 pid=1580) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP7 pid=1581) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP2 pid=1576) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP7 pid=1581) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP4 pid=1578) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP6 pid=1580) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP3 pid=1577) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP1 pid=1575) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP5 pid=1579) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP0 pid=1574) INFO 08-06 16:32:59 [model_runner.py:284] Loading model from scratch...
+(Worker_TP3 pid=1577) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP1 pid=1575) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP0 pid=1574) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP5 pid=1579) INFO 08-06 16:32:59 [rocm.py:615] Found incompatible backend(s) [ROCM_AITER_UNIFIED_ATTN, TURBOQUANT] with AttentionType.DECODER. Overriding with TRITON_ATTN out of potential backends: ['TRITON_ATTN'].
+(Worker_TP0 pid=1574) WARNING 08-06 16:33:00 [compilation.py:1338] Op 'sparse_attn_indexer' doesn't exist (or wasn't imported/registered), enabling with '+sparse_attn_indexer' has no effect
+(Worker_TP4 pid=1578) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP2 pid=1576) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP6 pid=1580) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP3 pid=1577) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP1 pid=1575) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP0 pid=1574) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP5 pid=1579) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP0 pid=1574) INFO 08-06 16:33:00 [weight_utils.py:869] Filesystem type for checkpoints: EXT4. Checkpoint size: 15.26 GiB. Available RAM: 1966.91 GiB.
+(Worker_TP0 pid=1574) INFO 08-06 16:33:00 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(Worker_TP7 pid=1581) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(Worker_TP6 pid=1580) INFO 08-06 16:33:03 [model_runner.py:305] Model loading took 1.92 GiB and 4.003393 seconds
+(Worker_TP2 pid=1576) INFO 08-06 16:33:03 [model_runner.py:305] Model loading took 1.92 GiB and 4.540945 seconds
+(Worker_TP3 pid=1577) INFO 08-06 16:33:03 [model_runner.py:305] Model loading took 1.92 GiB and 4.333192 seconds
+(Worker_TP4 pid=1578) INFO 08-06 16:33:03 [model_runner.py:305] Model loading took 1.92 GiB and 4.838284 seconds
+(Worker_TP7 pid=1581) INFO 08-06 16:33:04 [model_runner.py:305] Model loading took 1.92 GiB and 5.027627 seconds
+(Worker_TP1 pid=1575) INFO 08-06 16:33:04 [model_runner.py:305] Model loading took 1.92 GiB and 4.911460 seconds
+Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:03<00:15,  3.88s/it]
+(Worker_TP5 pid=1579) INFO 08-06 16:33:04 [model_runner.py:305] Model loading took 1.92 GiB and 5.319087 seconds
+Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:09<00:14,  4.80s/it]
+Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:14<00:10,  5.08s/it]
+Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:18<00:04,  4.72s/it]
+Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:19<00:00,  3.10s/it]
+Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:19<00:00,  3.83s/it]
+(Worker_TP0 pid=1574) 
+(Worker_TP0 pid=1574) INFO 08-06 16:33:19 [default_loader.py:430] Loading weights took 19.14 seconds
+(Worker_TP0 pid=1574) INFO 08-06 16:33:20 [model_runner.py:305] Model loading took 1.92 GiB and 21.025362 seconds
+(Worker_TP0 pid=1574) INFO 08-06 16:33:20 [mooncake_connector.py:508] MooncakeConnector setting KV cache layout to HND for heterogeneous TP-safe KV transfer.
+(Worker_TP0 pid=1574) INFO 08-06 16:33:25 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/343b922339/rank_0_0/backbone for vLLM's torch.compile
+(Worker_TP0 pid=1574) INFO 08-06 16:33:25 [backends.py:1155] Dynamo bytecode transform time: 4.22 s
+(Worker_TP0 pid=1574) INFO 08-06 16:33:30 [backends.py:378] Cache the graph of compile range (1, 8192) for later use
+(Worker_TP0 pid=1574) INFO 08-06 16:33:34 [backends.py:393] Compiling a graph for compile range (1, 8192) takes 8.81 s
+(Worker_TP0 pid=1574) INFO 08-06 16:33:35 [decorators.py:708] saved AOT compiled function to /root/.cache/vllm/torch_compile_cache/torch_aot_compile/555789847dc7203e27d26d0e0a12288f8c3525781697e5a9d632e18c9f2b06c5/rank_0_0/model
+(Worker_TP0 pid=1574) INFO 08-06 16:33:35 [monitor.py:53] torch.compile took 14.89 s in total
+(Worker_TP0 pid=1574) INFO 08-06 16:33:39 [monitor.py:81] Initial profiling/warmup run took 3.96 s
+(Worker_TP0 pid=1574) INFO 08-06 16:33:47 [gpu_worker.py:560] Available KV cache memory: 224.32 GiB
+(EngineCore pid=1311) INFO 08-06 16:33:48 [kv_cache_utils.py:2177] GPU KV cache size: 13,043,232 tokens
+(EngineCore pid=1311) INFO 08-06 16:33:48 [kv_cache_utils.py:2178] Maximum concurrency for 40,960 tokens per request: 318.44x
+(Worker_TP0 pid=1574) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP2 pid=1576) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP0 pid=1574) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP2 pid=1576) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP0 pid=1574) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP7 pid=1581) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP5 pid=1579) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP3 pid=1577) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP2 pid=1576) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP7 pid=1581) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP5 pid=1579) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP3 pid=1577) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP7 pid=1581) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP5 pid=1579) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP3 pid=1577) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP6 pid=1580) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP6 pid=1580) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP0 pid=1574) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+(Worker_TP1 pid=1575) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP6 pid=1580) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP1 pid=1575) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP4 pid=1578) INFO 08-06 16:33:48 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP2 pid=1576) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+(Worker_TP1 pid=1575) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+(Worker_TP5 pid=1579) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+(Worker_TP4 pid=1578) WARNING 08-06 16:33:48 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(Worker_TP7 pid=1581) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.027877  1574 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.027940  1576 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.027948  1579 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.027956  1581 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+(Worker_TP3 pid=1577) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+(Worker_TP4 pid=1578) INFO 08-06 16:33:48 [mooncake_connector.py:907] Initializing Mooncake Transfer Engine worker 2cb53100-8a92-4102-b515-1d2238c6d263
+I0806 16:33:48.027978  1574 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.027988  1574 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.027979  1577 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+I0806 16:33:48.028023  1574 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:15600
+I0806 16:33:48.028034  1579 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.028040  1576 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.028043  1579 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+I0806 16:33:48.028047  1576 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+(Worker_TP6 pid=1580) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+(Worker_TP1 pid=1575) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+I0806 16:33:48.028059  1577 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.028059  1581 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.028055  1580 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+I0806 16:33:48.028069  1581 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+I0806 16:33:48.028067  1577 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+I0806 16:33:48.028083  1579 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:15122
+I0806 16:33:48.028088  1576 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:16436
+I0806 16:33:48.028106  1577 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:16669
+I0806 16:33:48.028107  1581 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:15223
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W0806 16:33:48.028101  1575 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+I0806 16:33:48.028129  1574 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028134  1574 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0806 16:33:48.028146  1580 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+W0806 16:33:48.028126  1578 transfer_engine_py.cpp:100] Using default malloc/free for protocol: rdma
+I0806 16:33:48.028154  1580 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+I0806 16:33:48.028190  1576 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028194  1580 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:15689
+I0806 16:33:48.028194  1575 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.028195  1576 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028204  1575 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+I0806 16:33:48.028205  1579 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028209  1579 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028223  1577 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028225  1578 transfer_engine_impl.cpp:971] Metrics reporting is disabled (set MC_TE_METRIC=1 to enable)
+I0806 16:33:48.028226  1577 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028229  1581 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028234  1581 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028235  1578 transfer_engine_impl.cpp:115] Transfer Engine parseHostNameWithPort. server_name: 10.135.2.237 port: 12001
+(Worker_TP4 pid=1578) INFO 08-06 16:33:48 [mooncake_connector.py:934] The Mooncake Transfer Engine is using rdma as its protocol.
+I0806 16:33:48.028242  1575 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:15880
+I0806 16:33:48.028272  1578 transfer_engine_impl.cpp:182] Transfer Engine RPC using P2P handshake, listening on 10.135.2.237:16645
+I0806 16:33:48.028301  1580 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028306  1580 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028354  1578 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028357  1575 transfer_engine_impl.cpp:258] Auto-discovering topology...
+I0806 16:33:48.028363  1575 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028363  1578 topology.cpp:168] IB device whitelist: ionic_0,ionic_1,ionic_2,ionic_3,ionic_4,ionic_5,ionic_6,ionic_7
+I0806 16:33:48.028450  1574 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028527  1576 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028534  1577 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028545  1579 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028553  1581 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028635  1574 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028645  1580 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028679  1575 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028714  1578 topology.cpp:127] Device ionic_0 port 1 is available
+I0806 16:33:48.028721  1576 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028736  1577 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028743  1579 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028752  1581 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028761  1574 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.028816  1580 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028860  1575 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028893  1576 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.028927  1577 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.028970  1579 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.028972  1574 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.028976  1581 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.028985  1578 topology.cpp:127] Device ionic_1 port 1 is available
+I0806 16:33:48.028992  1580 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.029053  1576 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029084  1575 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.029105  1577 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029145  1574 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029160  1579 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029163  1581 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029170  1580 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029173  1578 topology.cpp:127] Device ionic_2 port 1 is available
+I0806 16:33:48.029186  1576 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029227  1575 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029242  1577 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029305  1574 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029345  1580 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029356  1581 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029363  1578 topology.cpp:127] Device ionic_3 port 1 is available
+I0806 16:33:48.029366  1579 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029369  1576 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029378  1575 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029382  1577 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029448  1574 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029523  1580 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029531  1581 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029564  1578 topology.cpp:127] Device ionic_4 port 1 is available
+I0806 16:33:48.029564  1576 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029570  1579 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029574  1577 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029584  1575 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029592  1574 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029719  1581 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029721  1580 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029770  1574 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.029774  1578 topology.cpp:127] Device ionic_5 port 1 is available
+I0806 16:33:48.029788  1577 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029793  1579 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029794  1575 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029804  1576 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029850  1574 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.029863  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.029865  1581 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029886  1580 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029935  1577 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.029940  1578 topology.cpp:127] Device ionic_6 port 1 is available
+I0806 16:33:48.029955  1579 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029969  1575 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.029978  1576 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.029995  1581 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.030014  1580 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.030020  1577 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030031  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030066  1578 topology.cpp:127] Device ionic_7 port 1 is available
+I0806 16:33:48.030077  1579 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.030082  1575 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.030086  1576 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030097  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030099  1581 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030109  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030134  1580 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030148  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030153  1579 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030153  1575 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030164  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030164  1578 transfer_engine_impl.cpp:273] Topology discovery complete. Found 8 HCAs.
+I0806 16:33:48.030165  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030241  1578 rdma_transport.cpp:85] [RDMA] Relaxed ordering is supported on this host; IBV_ACCESS_RELAXED_ORDERING will be requested for registered memory regions.
+I0806 16:33:48.030260  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.030328  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030494  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030539  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030704  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030704  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030717  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030735  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.030756  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_4/ (network state: with network device)
+I0806 16:33:48.088250  1580 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.088267  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.088670  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.093163  1581 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.093180  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.093523  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.096048  1578 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.096062  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.096403  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.097005  1574 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.097023  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.097430  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.098925  1575 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.098937  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.099264  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.099834  1577 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.099848  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.100172  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.101877  1576 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.101894  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.102303  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.103856  1579 rdma_context.cpp:288] RDMA device: ionic_4, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:68:02
+I0806 16:33:48.103871  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.104228  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_5/ (network state: with network device)
+I0806 16:33:48.176834  1580 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.176848  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.177228  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.181773  1581 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.181787  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.182123  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.184628  1578 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.184641  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.184993  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.185537  1574 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.185551  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.185941  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.187558  1575 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.187570  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.187897  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.188477  1577 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.188493  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.188876  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.190459  1576 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.190472  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.190841  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.192487  1579 rdma_context.cpp:288] RDMA device: ionic_5, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:69:02
+I0806 16:33:48.192502  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.192916  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_6/ (network state: with network device)
+I0806 16:33:48.234226  1580 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.234241  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.234599  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.239176  1581 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.239198  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.239575  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.242909  1574 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.242923  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.243255  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.245144  1578 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.245158  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.245178  1575 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.245187  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.245573  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.245586  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.245831  1577 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.245846  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.246224  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.247808  1576 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.247819  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.248176  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.249832  1579 rdma_context.cpp:288] RDMA device: ionic_6, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6a:02
+I0806 16:33:48.249858  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.250257  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_7/ (network state: with network device)
+I0806 16:33:48.328236  1580 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.328251  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.328619  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.333139  1581 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.333153  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.333477  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.333525  1580 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.333535  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.333897  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.336035  1578 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.336048  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.336392  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.336993  1574 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.337009  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.337409  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.337563  1581 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.337574  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.337877  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.338948  1575 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.338958  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.339288  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.339880  1577 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.339895  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.340276  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.341850  1576 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.341862  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.342211  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.343871  1579 rdma_context.cpp:288] RDMA device: ionic_7, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:6b:01
+I0806 16:33:48.343883  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.344226  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_0/ (network state: with network device)
+I0806 16:33:48.345326  1578 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.345340  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.345681  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.348292  1574 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.348315  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.348714  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.349186  1577 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.349201  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.349581  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.351176  1575 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.351186  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.351521  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.354032  1576 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.354043  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.354379  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.357160  1579 rdma_context.cpp:288] RDMA device: ionic_0, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:64:01
+I0806 16:33:48.357172  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.357509  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_1/ (network state: with network device)
+I0806 16:33:48.386050  1580 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.386065  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.386425  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.391779  1577 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.391790  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.392098  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.393788  1581 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.393800  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.394116  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.394716  1576 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.394727  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.395056  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.396802  1578 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.396833  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.397327  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.397609  1579 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.397620  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.397974  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.399659  1574 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.399672  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.400041  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.401590  1575 rdma_context.cpp:288] RDMA device: ionic_1, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:65:01
+I0806 16:33:48.401604  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.401932  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_2/ (network state: with network device)
+I0806 16:33:48.450977  1580 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.450989  1580 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.451354  1580 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.452972  1581 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.452982  1581 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.453287  1581 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.453838  1577 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.453848  1577 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.454159  1577 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.454788  1578 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.454800  1578 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.455145  1578 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.456820  1574 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.456832  1574 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.457260  1574 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.459702  1575 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.459718  1575 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.460131  1575 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.460960  1579 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.460968  1579 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.461000  1576 rdma_context.cpp:288] RDMA device: ionic_2, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:66:01
+I0806 16:33:48.461014  1576 rdma_context.cpp:205] Using SIEVE endpoint store
+I0806 16:33:48.461308  1579 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.461393  1576 rdma_context.cpp:1334] Find best gid index: 1 on ionic_3/ (network state: with network device)
+I0806 16:33:48.472198  1580 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.472254  1580 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.474184  1581 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.474229  1581 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.475078  1577 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.475118  1577 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.476017  1578 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.476082  1578 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.478119  1574 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.478204  1574 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.478899  1579 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.478973  1579 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.481853  1576 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.481942  1576 transfer_engine_impl.cpp:388] installTransport, type=rdma
+I0806 16:33:48.485261  1575 rdma_context.cpp:288] RDMA device: ionic_3, LID: 0, GID: (GID_Index 1) 00:00:00:00:00:00:00:00:00:00:ff:ff:c0:a8:67:01
+I0806 16:33:48.485303  1575 transfer_engine_impl.cpp:388] installTransport, type=rdma
+(Worker_TP6 pid=1580) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP7 pid=1581) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP3 pid=1577) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP5 pid=1579) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP1 pid=1575) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP2 pid=1576) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP0 pid=1574) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP4 pid=1578) INFO 08-06 16:33:48 [mooncake_connector.py:1656] Registering KV_Caches. use_mla: False
+(Worker_TP0 pid=1574) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP0 pid=1574) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP4 pid=1578) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP4 pid=1578) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP1 pid=1575) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP6 pid=1580) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP1 pid=1575) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP6 pid=1580) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP7 pid=1581) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP7 pid=1581) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP3 pid=1577) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP2 pid=1576) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP3 pid=1577) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP2 pid=1576) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+(Worker_TP5 pid=1579) INFO 08-06 16:34:06 [ll_bf16.py:30] cuteDSL (CUTLASS Python) not available, ll_bf16_gemm disabled
+(Worker_TP5 pid=1579) INFO 08-06 16:34:06 [cutedsl_warmup.py:96] Skipping CuTeDSL warmup on non-CUDA platform.
+Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:02<00:00, 21.29it/s]
+(Worker_TP4 pid=1578) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:03<00:00, 16.00it/s]
+(Worker_TP2 pid=1576) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP0 pid=1574) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP5 pid=1579) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP7 pid=1581) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP3 pid=1577) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP1 pid=1575) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP6 pid=1580) INFO 08-06 16:34:12 [custom_all_reduce.py:213] Registering 7446 cuda graph addresses
+(Worker_TP7 pid=1581) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP7 pid=1581) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.79/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.43 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=236023531930` (219.81 GiB) to fit into requested memory, or `--kv-cache-memory=293624328192` (273.46 GiB) to fully utilize gpu memory. Current kv cache memory in use is 224.04 GiB.
+(Worker_TP3 pid=1577) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP3 pid=1577) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.67/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.56 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=235887217050` (219.69 GiB) to fit into requested memory, or `--kv-cache-memory=293351698432` (273.21 GiB) to fully utilize gpu memory. Current kv cache memory in use is 223.91 GiB.
+(Worker_TP4 pid=1578) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP4 pid=1578) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.72/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.51 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=235939645850` (219.74 GiB) to fit into requested memory, or `--kv-cache-memory=293456556032` (273.3 GiB) to fully utilize gpu memory. Current kv cache memory in use is 223.96 GiB.
+(Worker_TP1 pid=1575) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP1 pid=1575) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.66/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.56 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=235880925594` (219.68 GiB) to fit into requested memory, or `--kv-cache-memory=293339115520` (273.19 GiB) to fully utilize gpu memory. Current kv cache memory in use is 223.91 GiB.
+(Worker_TP0 pid=1574) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP0 pid=1574) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (284.08/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.15 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=236327618970` (220.1 GiB) to fit into requested memory, or `--kv-cache-memory=294232502272` (274.03 GiB) to fully utilize gpu memory. Current kv cache memory in use is 224.32 GiB.
+(Worker_TP5 pid=1579) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP5 pid=1579) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.8/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.42 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=236031920538` (219.82 GiB) to fit into requested memory, or `--kv-cache-memory=293641105408` (273.47 GiB) to fully utilize gpu memory. Current kv cache memory in use is 224.05 GiB.
+(Worker_TP6 pid=1580) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP2 pid=1576) INFO 08-06 16:34:12 [model_runner.py:747] Graph capturing finished in 6 secs, took 4.08 GiB
+(Worker_TP6 pid=1580) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.79/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.44 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=236013046170` (219.8 GiB) to fit into requested memory, or `--kv-cache-memory=293603356672` (273.44 GiB) to fully utilize gpu memory. Current kv cache memory in use is 224.03 GiB.
+(Worker_TP2 pid=1576) INFO 08-06 16:34:12 [gpu_worker.py:857] Free memory on device (283.66/287.69 GiB) on startup. Desired GPU memory utilization is (0.8, 230.15 GiB). Actual usage is 1.92 GiB for weight, 0.76 GiB for peak activation, 3.57 GiB for non-torch memory, and 4.08 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=235874634138` (219.68 GiB) to fit into requested memory, or `--kv-cache-memory=293326532608` (273.18 GiB) to fully utilize gpu memory. Current kv cache memory in use is 223.9 GiB.
+(Worker_TP4 pid=1578) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP3 pid=1577) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP2 pid=1576) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP6 pid=1580) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP0 pid=1574) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP5 pid=1579) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP1 pid=1575) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(Worker_TP7 pid=1581) INFO 08-06 16:34:19 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=1311) INFO 08-06 16:34:20 [core.py:340] init engine (profile, create kv cache, warmup model) took 59.65 s (compilation: 15.17 s)
+(EngineCore pid=1311) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(EngineCore pid=1311) INFO 08-06 16:34:21 [factory.py:62] Creating v1 connector with name: MooncakeConnector and engine_id: 2cb53100-8a92-4102-b515-1d2238c6d263
+(EngineCore pid=1311) WARNING 08-06 16:34:21 [base.py:190] Initializing KVConnectorBase_V1. This API is experimental and subject to change in the future as we iterate the design.
+(EngineCore pid=1311) INFO 08-06 16:34:21 [mooncake_connector.py:632] Initializing Mooncake Transfer Engine Scheduler 2cb53100-8a92-4102-b515-1d2238c6d263
+(EngineCore pid=1311) INFO 08-06 16:34:22 [vllm.py:1109] Asynchronous scheduling is enabled.
+(EngineCore pid=1311) INFO 08-06 16:34:22 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(APIServer pid=1) INFO 08-06 16:34:23 [api_server.py:673] Supported tasks: ['generate']
+(APIServer pid=1) WARNING 08-06 16:34:23 [model.py:1546] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 0.6, 'top_k': 20, 'top_p': 0.95}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+(APIServer pid=1) INFO 08-06 16:34:24 [hf.py:540] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
+(APIServer pid=1) INFO 08-06 16:34:25 [api_server.py:677] Starting vLLM server on http://0.0.0.0:8020
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:37] Available routes are:
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /openapi.json, Methods: GET, HEAD
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /docs, Methods: GET, HEAD
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /docs/oauth2-redirect, Methods: GET, HEAD
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /redoc, Methods: GET, HEAD
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /load, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /version, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /health, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /metrics, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /tokenize, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /detokenize, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/models, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /ping, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /ping, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /invocations, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/chat/completions, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/chat/completions/batch, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/responses, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/responses/{response_id}, Methods: GET
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/responses/{response_id}/cancel, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/completions, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/messages, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/messages/count_tokens, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /generative_scoring, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /scale_elastic_ep, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /is_scaling_elastic_ep, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/chat/completions/render, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/completions/render, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/chat/completions/derender, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /v1/completions/derender, Methods: POST
+(APIServer pid=1) INFO 08-06 16:34:25 [launcher.py:46] Route: /inference/v1/generate, Methods: POST
+(APIServer pid=1) INFO:     Started server process [1]
+(APIServer pid=1) INFO:     Waiting for application startup.
+(APIServer pid=1) INFO:     Application startup complete.
+(APIServer pid=1) INFO:     10.135.2.99:49418 - "GET /health HTTP/1.1" 200 OK
+I0806 16:36:54.069675  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.070111  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.070734  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.071388  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.071820  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.072275  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.072865  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.087391  2389 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.094960  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.095347  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.095803  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.096241  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.096837  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.097262  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.097719  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.101773  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.102269  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.102835  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.103214  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.103667  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.104063  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.104398  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.106098  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.106531  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.107277  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.107721  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.108428  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.108866  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.109467  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.122021  2390 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.136361  2392 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.137245  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.137641  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.138312  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.138363  2391 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.138696  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.139106  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.139549  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.140323  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.140326  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.140774  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.141337  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.142007  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.142742  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.143455  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.144172  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.145793  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.146224  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.146857  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.147557  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.147586  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.147984  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.148083  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.148666  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.148726  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.149132  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.149135  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.149554  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.150130  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.150586  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.173677  2386 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.189668  2388 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.195696  2393 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+I0806 16:36:54.200222  2387 rdma_endpoint.cpp:671] Received RDMA ready ACK.
+(APIServer pid=1) INFO:     10.135.2.99:41334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 08-06 16:37:05 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 28.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO:     10.135.2.99:35146 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 08-06 16:37:15 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 32.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO 08-06 16:37:25 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO:     10.135.2.99:37380 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 08-06 16:37:55 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 12.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO 08-06 16:38:05 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO:     10.135.2.99:56282 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 08-06 16:38:15 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 12.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO 08-06 16:38:25 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO:     10.135.2.99:49044 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 08-06 16:38:45 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 12.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
+(APIServer pid=1) INFO 08-06 16:38:55 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%, External prefix cache hit rate: 100.0%
