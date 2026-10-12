@@ -481,3 +481,39 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 - 若要重新部署本方案：`kubectl apply -f tep-server.yaml`；日志：`kubectl logs -f tp16-0`；验证：`kubectl exec tp16-0 -- curl -s localhost:8000/v1/models`。
 - 停止：`kubectl delete -f tep-server.yaml`（节点上的 HF 缓存保留，下次启动不用重新下载）。
 - 后续可做：在同一镜像、同一脚本下与 TP8 × PP2、DEP（hybrid-lb）对比；排查 FlashInfer all-reduce 初始化失败；用 `NCCL_DEBUG=INFO` 确认传输路径；启用 `--enable-eplb` 看专家负载。
+
+
+## 附录: 进程
+
+``` bash
+root@tp16-0:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  9 18:51 ?        00:00:47 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1409       1  0 18:52 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(102)
+root        1410       1  6 18:52 ?        00:00:29 VLLM::EngineCore
+root        1641    1410 61 18:52 ?        00:04:31 VLLM::Worker_TP0_EP0
+root        1642    1410 62 18:52 ?        00:04:33 VLLM::Worker_TP1_EP1
+root        1643    1410 62 18:52 ?        00:04:33 VLLM::Worker_TP2_EP2
+root        1644    1410 62 18:52 ?        00:04:36 VLLM::Worker_TP3_EP3
+root        1645    1410 62 18:52 ?        00:04:35 VLLM::Worker_TP4_EP4
+root        1646    1410 61 18:52 ?        00:04:31 VLLM::Worker_TP5_EP5
+root        1647    1410 61 18:52 ?        00:04:31 VLLM::Worker_TP6_EP6
+root        1648    1410 61 18:52 ?        00:04:32 VLLM::Worker_TP7_EP7
+root        2020       0  0 18:52 pts/0    00:00:00 /bin/bash
+root       10343    2020  0 18:59 pts/0    00:00:00 ps -ef
+
+root@tp16-1:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  8 18:51 ?        00:00:46 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1407       0  0 18:52 pts/0    00:00:00 /bin/bash
+root        1443       1  0 18:52 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(74)
+root        1444       1 58 18:52 ?        00:05:01 VLLM::Worker_TP8_EP8
+root        1445       1 58 18:52 ?        00:04:59 VLLM::Worker_TP9_EP9
+root        1446       1 59 18:52 ?        00:05:05 VLLM::Worker_TP10_EP10
+root        1447       1 58 18:52 ?        00:05:03 VLLM::Worker_TP11_EP11
+root        1448       1 59 18:52 ?        00:05:06 VLLM::Worker_TP12_EP12
+root        1449       1 58 18:52 ?        00:04:59 VLLM::Worker_TP13_EP13
+root        1450       1 58 18:52 ?        00:05:03 VLLM::Worker_TP14_EP14
+root        1451       1 59 18:52 ?        00:05:04 VLLM::Worker_TP15_EP15
+root       11703    1407  0 19:00 pts/0    00:00:00 ps -ef
+```
