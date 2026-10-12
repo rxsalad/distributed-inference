@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: server
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      labels:
+        app: server
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          roce-net-fabric0@fabric0,
+          roce-net-fabric2@fabric2,
+          roce-net-fabric4@fabric4,
+          roce-net-fabric6@fabric6,
+          roce-net-fabric8@fabric8,
+          roce-net-fabric10@fabric10,
+          roce-net-fabric12@fabric12,
+          roce-net-fabric14@fabric14
+    spec:
+      restartPolicy: Always
+
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: nvidia
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      volumes:
+        - name: temp-hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+
+        - name: dshm 
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+      containers:
+
+        - name: server
+          #image: pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel
+          #image: vllm/vllm-openai:cu130-nightly
+          image: vllm/vllm-openai:v0.31.0
+          #image: vllm/vllm-openai:cu129-nightly
+          #image: lmsysorg/sglang:dev-cu13
+          #image: lmsysorg/sglang:dev-cu12
+          
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http-example
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+             set -ex
+          
+             apt update
+             apt install -y iproute2 iputils-ping infiniband-diags ibverbs-utils net-tools
+             
+             hf download deepseek-ai/DeepSeek-V3-0324
+             
+             exec sleep infinity 
+ 
+          securityContext:
+
+            capabilities:
+              add:
+              - IPC_LOCK
+
+          volumeMounts:
+            - name: temp-hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+            limits:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10
+            requests:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10

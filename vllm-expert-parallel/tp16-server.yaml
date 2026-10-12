@@ -1,0 +1,191 @@
+# Multi-Node Tensor Parallel (TP16, EP16)：2 个 Pod × 8 × B300 = 1 个 vLLM 实例
+# 对应 recipe.md 第 4 节。命令来自 recipes.vllm.ai（hardware=b300, nodes=2, multi_node_tp）。
+# 与页面的差异：增加 NCCL_IB_GID_INDEX=3、VLLM_ENGINE_READY_TIMEOUT_S（来自 vllm-dp16-ep-two-node.md 的实测经验）。
+#
+# 部署：kubectl apply -f tp16-server.yaml
+# 日志：kubectl logs -f tp16-0
+# 验证：kubectl exec tp16-0 -- curl -s localhost:8000/v1/models
+# 删除：kubectl delete -f tp16-server.yaml
+---
+# Headless Service：给 Pod 稳定的 DNS 名（tp16-0.tp16-headless），用于解析 HEAD_IP。
+# publishNotReadyAddresses：Pod 还没 Ready 时 DNS 也要能解析（vLLM 服务启动前就要用）。
+apiVersion: v1
+kind: Service
+metadata:
+  name: tp16-headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: tp16
+  ports:
+    - name: http
+      port: 8000
+---
+# 对外入口：只指向 tp16-0（主节点，rank 0）。tp16-1 是 headless worker，不提供 API。
+apiVersion: v1
+kind: Service
+metadata:
+  name: tp16-api
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: tp16-0
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tp16
+spec:
+  serviceName: tp16-headless
+  replicas: 2
+  # 两个 Pod 必须同时启动：TP16 要所有 rank 都到齐才能完成初始化
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: tp16
+  template:
+    metadata:
+      labels:
+        app: tp16
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          roce-net-fabric0@fabric0,
+          roce-net-fabric2@fabric2,
+          roce-net-fabric4@fabric4,
+          roce-net-fabric6@fabric6,
+          roce-net-fabric8@fabric8,
+          roce-net-fabric10@fabric10,
+          roce-net-fabric12@fabric12,
+          roce-net-fabric14@fabric14
+    spec:
+      restartPolicy: Always
+
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: nvidia
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      # 两个 Pod 分到不同节点（每个节点 8 卡，本来也只能放一个）
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: tp16
+              topologyKey: kubernetes.io/hostname
+
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+      containers:
+        - name: server
+          image: vllm/vllm-openai:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+
+          env:
+            # --- 页面给出的环境变量 ---
+            - name: GLOO_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            # --- 本集群实测需要（vllm-dp16-ep-two-node.md 6.1）：
+            #     不设时 NCCL 会选到链路本地 RoCE GID（fe80::），跨节点不可达，初始化静默卡死
+            - name: NCCL_IB_GID_INDEX
+              value: "3"
+            # --- 权重加载慢，默认 600 秒就绪超时不够（vllm-dp8-ep-single-node.md 2.4）
+            - name: VLLM_ENGINE_READY_TIMEOUT_S
+              value: "3600"
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -ex
+
+              # Pod 序号：tp16-0 -> 0（主节点），tp16-1 -> 1（headless worker）
+              NODE_RANK=${HOSTNAME##*-}
+              HEAD_HOST=tp16-0.tp16-headless
+
+              # 等 DNS 解析出主节点 IP，作为 --master-addr
+              # 循环直到解析出非空 IP（DNS 有瞬时竞态：getent 可能先返回成功、紧接着取 IP 却为空）
+              HEAD_IP=""
+              until [ -n "${HEAD_IP}" ]; do
+                HEAD_IP=$(getent ahostsv4 ${HEAD_HOST} 2>/dev/null | awk 'NR==1{print $1}')
+                [ -n "${HEAD_IP}" ] || { echo "waiting for ${HEAD_HOST} ..."; sleep 2; }
+              done
+              echo "NODE_RANK=${NODE_RANK} HEAD_IP=${HEAD_IP}"
+
+              # 每个节点的 hostPath 缓存不共享，各自下载（已有缓存时立即返回）
+              hf download deepseek-ai/DeepSeek-V3
+
+              EXTRA=""
+              if [ "${NODE_RANK}" != "0" ]; then
+                EXTRA="--headless"
+              fi
+
+              # --disable-custom-all-reduce：页面命令没有。v0.31.0 的 custom all-reduce 在跨节点 TP16 下
+              # 会卡在 MNNVL 共享内存 rendezvous（custom_all_reduce.py:362），14 个 rank 互相等待；
+              # 禁用后退回 NCCL。详见 strategy1.md。
+              # 注意：recipe 命令里的 chat template 路径是 vLLM 仓库里的相对路径，
+              # 镜像里不一定存在；如启动报找不到文件，先去掉 --chat-template 这一行再试。
+              exec vllm serve deepseek-ai/DeepSeek-V3 \
+                --trust-remote-code \
+                --enable-expert-parallel \
+                --tensor-parallel-size 16 \
+                --nnodes 2 \
+                --node-rank ${NODE_RANK} \
+                --master-addr ${HEAD_IP} \
+                --disable-custom-all-reduce \
+                ${EXTRA} \
+                --enable-auto-tool-choice \
+                --tool-call-parser deepseek_v3 \
+                --reasoning-parser deepseek_v3
+
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+            limits:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10
+            requests:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10

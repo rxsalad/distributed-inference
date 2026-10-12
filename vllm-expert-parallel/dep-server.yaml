@@ -1,0 +1,189 @@
+# Multi-Node Data + Expert Parallel（DEP：DP Attention + EP）：2 个 Pod × 8 × B300 = DP16 + EP16
+# 对应 recipe.md 第 6 节（recipes.vllm.ai，hardware=b300, nodes=2, strategy=multi_node_dep）。
+# 与页面的差异：
+#   - 增加 NCCL_IB_GID_INDEX=3、VLLM_ENGINE_READY_TIMEOUT_S（来自 vllm-dp16-ep-two-node.md 的实测经验）
+#   - 显式指定 --data-parallel-rpc-port 13345（之前实验里用过）
+#   - 去掉 --chat-template（镜像里的路径未验证，与 tp16-server.yaml 保持一致）
+#   - 与 tp16-server.yaml 一样保留 --enable-auto-tool-choice / --tool-call-parser / --reasoning-parser，便于对比
+#
+# 部署：kubectl apply -f dep-server.yaml
+# 日志：kubectl logs -f dep-0
+# 验证：kubectl exec dep-0 -- curl -s localhost:8000/v1/models
+# 删除：kubectl delete -f dep-server.yaml
+---
+# Headless Service：给 Pod 稳定 DNS（dep-0.dep-headless），publishNotReadyAddresses 使 Pod 未 Ready 时也能解析
+apiVersion: v1
+kind: Service
+metadata:
+  name: dep-headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: dep
+  ports:
+    - name: http
+      port: 8000
+---
+# 对外入口：hybrid-lb 下两个节点都提供 API，由 Service 在两个 Pod 之间做连接级负载均衡
+apiVersion: v1
+kind: Service
+metadata:
+  name: dep-api
+spec:
+  selector:
+    app: dep
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dep
+spec:
+  serviceName: dep-headless
+  replicas: 2
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: dep
+  template:
+    metadata:
+      labels:
+        app: dep
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          roce-net-fabric0@fabric0,
+          roce-net-fabric2@fabric2,
+          roce-net-fabric4@fabric4,
+          roce-net-fabric6@fabric6,
+          roce-net-fabric8@fabric8,
+          roce-net-fabric10@fabric10,
+          roce-net-fabric12@fabric12,
+          roce-net-fabric14@fabric14
+    spec:
+      restartPolicy: Always
+
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: nvidia
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      # 两个 Pod 分到不同节点；tp16 占用的节点 GPU 已满，调度器会自然落到另外两个节点
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: dep
+              topologyKey: kubernetes.io/hostname
+
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+      containers:
+        - name: server
+          image: vllm/vllm-openai:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+
+          env:
+            - name: GLOO_SOCKET_IFNAME
+              value: eth0
+            - name: NCCL_SOCKET_IFNAME
+              value: eth0
+            # 本集群实测需要：否则 NCCL 选到链路本地 RoCE GID，跨节点静默卡死
+            - name: NCCL_IB_GID_INDEX
+              value: "3"
+            - name: VLLM_ENGINE_READY_TIMEOUT_S
+              value: "3600"
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -ex
+
+              # Pod 序号：dep-0 -> 0（DP rank 0–7，DP 协调者），dep-1 -> 1（DP rank 8–15）
+              NODE_IDX=${HOSTNAME##*-}
+              HEAD_HOST=dep-0.dep-headless
+              RPC_PORT=13345
+              LOCAL_DP=8
+
+              # 循环直到解析出非空 IP（DNS 有瞬时竞态：getent 可能先返回成功、紧接着取 IP 却为空）
+              HEAD_IP=""
+              until [ -n "${HEAD_IP}" ]; do
+                HEAD_IP=$(getent ahostsv4 ${HEAD_HOST} 2>/dev/null | awk 'NR==1{print $1}')
+                [ -n "${HEAD_IP}" ] || { echo "waiting for ${HEAD_HOST} ..."; sleep 2; }
+              done
+              echo "NODE_IDX=${NODE_IDX} HEAD_IP=${HEAD_IP}"
+
+              hf download deepseek-ai/DeepSeek-V3
+
+              EXTRA=""
+              if [ "${NODE_IDX}" != "0" ]; then
+                EXTRA="--data-parallel-start-rank $((NODE_IDX * LOCAL_DP))"
+                # 等 DP 协调者（dep-0）的 RPC 端口就绪后再启动，避免过早连接
+                until timeout 2 bash -c "</dev/tcp/${HEAD_IP}/${RPC_PORT}" 2>/dev/null; do
+                  echo "waiting for DP master ${HEAD_IP}:${RPC_PORT} ..."; sleep 5
+                done
+              fi
+
+              exec vllm serve deepseek-ai/DeepSeek-V3 \
+                --trust-remote-code \
+                --enable-expert-parallel \
+                --data-parallel-hybrid-lb \
+                --data-parallel-size 16 \
+                --data-parallel-size-local ${LOCAL_DP} \
+                --data-parallel-address ${HEAD_IP} \
+                --data-parallel-rpc-port ${RPC_PORT} \
+                ${EXTRA} \
+                --enable-auto-tool-choice \
+                --tool-call-parser deepseek_v3 \
+                --reasoning-parser deepseek_v3
+
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+            limits:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10
+            requests:
+              nvidia.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric2: 10
+              rdma/fabric4: 10
+              rdma/fabric6: 10
+              rdma/fabric8: 10
+              rdma/fabric10: 10
+              rdma/fabric12: 10
+              rdma/fabric14: 10
