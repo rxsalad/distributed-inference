@@ -228,3 +228,40 @@ PP 只有一个调度器和一个批次，批次依次流过两个阶段：没�
 - 从 dev 机访问 API：`kubectl port-forward svc/tppp-api 18000:8000`；RDMA 计数用 Pod 内的 `rdma statistic show link`（Pod 内 `/sys/class/infiniband/*/ports/1/hw_counters` 不存在）。
 - 本集群当前 4 个节点：`tppp`（本方案）占 2 个，`dep`（策略三）占 2 个，GPU 全部用满。
 - 现象：`pkill -f "nvidia-smi …"` 会杀掉自己的 `bash -c` 命令行（命令行里含该字符串），用 `pkill -x nvidia-smi`。
+
+
+## 附录: 进程
+
+``` bash
+root@tppp-0:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 01:01 ?        00:01:10 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1420       1  0 01:02 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(102)
+root        1421       1  0 01:02 ?        00:00:36 VLLM::EngineCore
+root        1652    1421  1 01:02 ?        00:13:53 VLLM::Worker_PP0_TP0_EP0
+root        1653    1421  1 01:02 ?        00:13:39 VLLM::Worker_PP0_TP1_EP1
+root        1654    1421  1 01:02 ?        00:13:38 VLLM::Worker_PP0_TP2_EP2
+root        1655    1421  1 01:02 ?        00:13:40 VLLM::Worker_PP0_TP3_EP3
+root        1656    1421  1 01:02 ?        00:13:38 VLLM::Worker_PP0_TP4_EP4
+root        1657    1421  1 01:02 ?        00:13:38 VLLM::Worker_PP0_TP5_EP5
+root        1658    1421  1 01:02 ?        00:13:40 VLLM::Worker_PP0_TP6_EP6
+root        1659    1421  1 01:02 ?        00:13:43 VLLM::Worker_PP0_TP7_EP7
+root        4122       0  0 01:04 pts/0    00:00:00 /bin/bash
+root       30079       0  0 18:46 pts/1    00:00:00 /bin/bash
+root       30088   30079  0 18:47 pts/1    00:00:00 ps -ef
+
+root@tppp-1:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 01:02 ?        00:00:47 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1429       1  0 01:02 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(74)
+root        1430       1  1 01:02 ?        00:12:40 VLLM::Worker_PP1_TP0_EP0
+root        1431       1  1 01:02 ?        00:12:40 VLLM::Worker_PP1_TP1_EP1
+root        1432       1  1 01:02 ?        00:12:47 VLLM::Worker_PP1_TP2_EP2
+root        1433       1  1 01:02 ?        00:12:40 VLLM::Worker_PP1_TP3_EP3
+root        1434       1  1 01:02 ?        00:12:35 VLLM::Worker_PP1_TP4_EP4
+root        1435       1  1 01:02 ?        00:12:40 VLLM::Worker_PP1_TP5_EP5
+root        1436       1  1 01:02 ?        00:12:38 VLLM::Worker_PP1_TP6_EP6
+root        1437       1  1 01:02 ?        00:12:35 VLLM::Worker_PP1_TP7_EP7
+root       25710       0  0 18:47 pts/0    00:00:00 /bin/bash
+root       25718   25710  0 18:48 pts/0    00:00:00 ps -ef
+```
