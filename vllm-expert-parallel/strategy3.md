@@ -431,3 +431,73 @@ PID 1   vllm serve（MainProcess）                  PID 1   vllm serve（MainPr
 - 查看：`kubectl get pods`；日志：`kubectl logs -f dep-0`；验证：`kubectl exec dep-0 -- curl -s localhost:8000/v1/models`；经 Service：`kubectl exec dep-0 -- curl -s http://dep-api:8000/v1/models`。
 - 停止：`kubectl delete -f dep-server.yaml`（HF 缓存保留）。
 - 后续可做：在相同条件下做性能对比（TEP16、DEP、2×TEP8）；用 `--api-server-count`、`--kv-cache-memory` 调优；对比 hybrid-lb 与 internal LB（`--data-parallel-size-local` + headless）两种模式；排查 DP 步同步的 Gloo 路径。
+
+
+## 附录: 进程
+
+``` bash
+root@dep-0:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 Oct11 ?        00:00:42 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1412       1  0 Oct11 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(40)
+root        1413       1  0 Oct11 ?        00:00:31 VLLM::DPCoordinator
+root        1613       1  0 Oct11 ?        00:01:31 VLLM::EngineCore_DP0
+root        1614       1  0 Oct11 ?        00:01:30 VLLM::EngineCore_DP1
+root        1615       1  0 Oct11 ?        00:01:24 VLLM::EngineCore_DP2
+root        1616       1  0 Oct11 ?        00:01:19 VLLM::EngineCore_DP3
+root        1617       1  0 Oct11 ?        00:01:26 VLLM::EngineCore_DP4
+root        1618       1  0 Oct11 ?        00:01:31 VLLM::EngineCore_DP5
+root        1619       1  0 Oct11 ?        00:01:30 VLLM::EngineCore_DP6
+root        1620       1  0 Oct11 ?        00:01:20 VLLM::EngineCore_DP7
+root        1621       1  0 Oct11 ?        00:00:39 VLLM::APIServer_0
+root        1622       1  0 Oct11 ?        00:00:45 VLLM::APIServer_1
+root        1623       1  0 Oct11 ?        00:00:40 VLLM::APIServer_2
+root        1624       1  0 Oct11 ?        00:00:48 VLLM::APIServer_3
+root        1625       1  0 Oct11 ?        00:00:37 VLLM::APIServer_4
+root        1626       1  0 Oct11 ?        00:00:39 VLLM::APIServer_5
+root        1627       1  0 Oct11 ?        00:00:40 VLLM::APIServer_6
+root        1628       1  0 Oct11 ?        00:00:45 VLLM::APIServer_7
+root        7051    1619  1 Oct11 ?        00:17:13 VLLM::Worker_DP6_EP6
+root        7052    1620  1 Oct11 ?        00:17:03 VLLM::Worker_DP7_EP7
+root        7053    1613  1 Oct11 ?        00:17:47 VLLM::Worker_DP0_EP0
+root        7145    1618  1 Oct11 ?        00:17:12 VLLM::Worker_DP5_EP5
+root        7181    1616  1 Oct11 ?        00:17:10 VLLM::Worker_DP3_EP3
+root        7182    1614  1 Oct11 ?        00:17:32 VLLM::Worker_DP1_EP1
+root        7183    1615  1 Oct11 ?        00:17:34 VLLM::Worker_DP2_EP2
+root        7213    1617  1 Oct11 ?        00:17:17 VLLM::Worker_DP4_EP4
+root       25476       0  0 00:07 pts/0    00:00:00 /bin/bash
+root       25743       0  0 17:22 pts/1    00:00:00 /bin/bash
+root       26015   25743  0 18:43 pts/1    00:00:00 ps -ef
+
+root@dep-1:/vllm-workspace# ps -ef
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 Oct11 ?        00:00:42 /usr/bin/python3 /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V3 --trust-remote-code --enable-expert-pa
+root        1418       1  0 Oct11 ?        00:00:00 /usr/bin/python3 -c from multiprocessing.resource_tracker import main;main(45)
+root        1419       1  0 Oct11 ?        00:01:33 VLLM::EngineCore_DP8
+root        1420       1  0 Oct11 ?        00:01:22 VLLM::EngineCore_DP9
+root        1421       1  0 Oct11 ?        00:01:28 VLLM::EngineCore_DP10
+root        1422       1  0 Oct11 ?        00:01:28 VLLM::EngineCore_DP11
+root        1423       1  0 Oct11 ?        00:01:32 VLLM::EngineCore_DP12
+root        1424       1  0 Oct11 ?        00:01:27 VLLM::EngineCore_DP13
+root        1425       1  0 Oct11 ?        00:01:26 VLLM::EngineCore_DP14
+root        1426       1  0 Oct11 ?        00:01:23 VLLM::EngineCore_DP15
+root        1427       1  0 Oct11 ?        00:00:37 VLLM::APIServer_0
+root        1428       1  0 Oct11 ?        00:00:45 VLLM::APIServer_1
+root        1429       1  0 Oct11 ?        00:00:38 VLLM::APIServer_2
+root        1430       1  0 Oct11 ?        00:00:47 VLLM::APIServer_3
+root        1431       1  0 Oct11 ?        00:00:43 VLLM::APIServer_4
+root        1432       1  0 Oct11 ?        00:00:43 VLLM::APIServer_5
+root        1433       1  0 Oct11 ?        00:00:43 VLLM::APIServer_6
+root        1434       1  0 Oct11 ?        00:00:46 VLLM::APIServer_7
+root        6789    1426  1 Oct11 ?        00:17:11 VLLM::Worker_DP15_EP15
+root        7007    1422  1 Oct11 ?        00:17:26 VLLM::Worker_DP11_EP11
+root        7008    1421  1 Oct11 ?        00:17:32 VLLM::Worker_DP10_EP10
+root        7009    1419  1 Oct11 ?        00:17:34 VLLM::Worker_DP8_EP8
+root        7010    1424  1 Oct11 ?        00:17:11 VLLM::Worker_DP13_EP13
+root        7011    1425  1 Oct11 ?        00:17:12 VLLM::Worker_DP14_EP14
+root        7012    1420  1 Oct11 ?        00:17:37 VLLM::Worker_DP9_EP9
+root        7013    1423  1 Oct11 ?        00:17:07 VLLM::Worker_DP12_EP12
+root       24991       0  0 00:07 pts/0    00:00:00 /bin/bash
+root       25030       0  0 17:22 pts/1    00:00:00 /bin/bash
+root       25039   25030  0 18:43 pts/1    00:00:00 ps -ef
+```
