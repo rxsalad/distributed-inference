@@ -84,7 +84,7 @@ out = h + FFN(Norm(h))            # FFN 子层 + 残差（FFN 的输入是 Norm(
 
 Attention 的变体直接决定 KV Cache 的大小和并行方式（MLA 与 TP 的矛盾见 `dp_attention.md`），FFN 换成 MoE 则引出 Expert Parallel（见 `dpa_ep.md`、`moe.md`）。
 
-**哪些操作 token 间有依赖**：Block 内只有 Attention 核心（$QK^\top$ 与对 V 的加权求和）让 token 之间互相依赖；其余操作（Q/K/V 投影、输出投影 $W_O$、FFN、Norm）都是 Position-Wise，即每个 token 用相同参数独立计算，可以按 token 任意切分。
+**哪些操作 token 间有依赖**：Block 内只有 Attention 核心（$QK^\top$ 与对 V 的加权求和）让 token 之间互相依赖；其余操作（Q/K/V 投影、输出投影 $W_O$、FFN、Norm，以及 Block 之外的 LM Head）都是 Position-Wise，即每个 token 用相同参数独立计算，可以按 token 任意切分。
 
 ### 2.3 Attention 详解
 

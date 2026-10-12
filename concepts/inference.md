@@ -1,6 +1,6 @@
 # Decoder-only 模型的推理
 
-> 承接 `decoder-only.md`（模型结构与训练）：本文讲推理阶段，按"Prefill 与 Decode → KV Cache → 一个推理步中的 GPU 与 CPU 分工 → 与分布式推理并行策略的对应"展开。并行与集合通信的概念见 `parallelism-basics.md`。
+> 承接 `decoder-only.md`（模型结构与训练）：本文讲推理阶段，按"Prefill 与 Decode → KV Cache → 一个推理步中的 GPU 与 CPU 分工 → 与分布式推理并行策略的对应 → Prefill / Decode 分离"展开。并行与集合通信的概念见 `parallelism-basics.md`。
 
 ## 1. Prefill 与 Decode
 
@@ -127,3 +127,13 @@ TP / DP / EP 等并行方式以及 AllReduce、All-to-All 等集合通信的含�
 | Embedding | 查表 | — | 通常随 TP 切分词表 |
 
 整个 Decoder-only 模型的推理，就是把 Prefill（算力型）和 Decode（带宽型）两类负载，在上述 Attention / FFN / MoE 的不同切分方式上组合调度。DeepSeek 一类的 MLA + MoE 模型采用 **Attention 用 DP、MoE 用 EP** 的组合，原因见 `dpa_ep.md`。
+
+## 5. Prefill / Decode 分离（PDD）
+
+Prefill 是算力型、Decode 是带宽型（见 1.3），两类负载放在同一个实例里会互相干扰：长 prompt 的 Prefill 会拖慢同一批里 Decode 的逐 token 延迟，chunked prefill（见 1.1）只能缓解、不能消除。**PDD（Prefill–Decode Disaggregation）** 的做法是把两个阶段放到**独立的实例**（可以是不同的 GPU 池）上：
+
+- **Prefill 实例**：处理 prompt，算完后得到该 request 的 KV Cache；
+- **KV 传输**：把 KV 从 Prefill 实例移交给 Decode 实例（通常走 RDMA，传输模式是固定的 rank 对 rank，对照 EP 的 any-to-any 见 `ep_values.md` 第 3 节）；
+- **Decode 实例**：接手 KV，逐 token 续写。
+
+**好处**：两类实例可以各自选最合适的并行度、batch 策略和资源配比，并独立扩缩；Prefill 对 Decode 延迟的干扰消失。**代价**：多了一次 KV 传输，以及两类实例之间的调度与容量配比。具体收益取决于负载（prompt 长度、并发、延迟目标），以上是通用描述，未对照具体引擎的实现。

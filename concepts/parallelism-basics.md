@@ -117,14 +117,21 @@ Attention 同理：各 GPU 负责一部分 head，输出投影 $W_O$ 按行切�
 
 ## 6. 混合并行
 
-实际系统常对模型的不同部分采用不同的并行方式，总 GPU 数等于各并行度的乘积。以 MoE 模型为例：
+实际系统常对模型的不同部分采用不同的并行方式，总 GPU 数等于各并行度的乘积。MoE 模型里，Attention 与 FFN / MoE 可以各选一种，形成下面几种搭配。**本系列统一使用这套命名**：简称由"Attention 的并行方式 + FFN / MoE 的并行方式"组成，D 表示 Attention 用 DP（即 DPA，Data Parallel Attention），T 表示用 TP，E 表示 MoE 用 EP。
 
-| 部分 | 常见并行方式 | 通信 |
-| --- | --- | --- |
-| Attention | DP（按 request），或 TP（按 head） | DP：无；TP：每层 AllReduce |
-| MoE | EP（按 Expert），或 TP | EP：All-to-All；TP：AllReduce |
-| Attention 与 MoE 之间 | 数据重排 | 视搭配而定（All-to-All，或 All-Gather + Reduce-Scatter） |
+| 方案 | 简称 | Attention | FFN / MoE | 典型适用 | 通信细节 |
+| --- | --- | --- | --- | --- | --- |
+| 纯 TP | TP | TP | TP | 稠密模型 | 每层 2 次 AllReduce |
+| DPA + TP | DTP | DP | TP | 稠密 FFN 或小规模 MoE，Attention 需要 DP | `dpa_ep.md` 第 6 节 |
+| DPA + EP | DEP | DP | EP | MLA + MoE 大模型（如 DeepSeek-V3） | `dpa_ep.md` 第 2~5 节 |
+| TP + EP | TEP | TP | EP | GQA 等 KV 可按 head 切分的 MoE 模型 | `dpa_ep.md` 第 6 节 |
 
-关于并行度之间的关系，以 vLLM 的 EP 部署为例：EP 度不是独立配置的，而是由配置推导，**EP = TP × DP**——Attention 侧的 DP 度为 DP（TP = 1 时 Attention 权重在所有 DP rank 上复制，即 DPA 形态），Expert 侧的 EP 度为 TP × DP，两侧共享同一组 GPU。所以本节开头的"乘积"是 TP × DP，EP 是推导量，不是再乘一次的因子。
+正文中全称与简称并用；通信方式的完整对比表只在 `dpa_ep.md` 第 6 节维护。**Wide EP** 不是新的搭配，而是在 EP 侧把 EP 度做得很大并配合负载均衡（见 `ep_values.md` 第 6 节"Wide EP"）。Attention 与 FFN / MoE 之间需要按后者的并行方式做数据重排：EP 用 All-to-All，TP 用 All-Gather + Reduce-Scatter（见 `dp_attention.md` 第 4 节）。
+
+**几个常用术语**：
+
+- **rank**：一个并行组内的一个参与者，通常对应一张 GPU。DP rank、EP rank 指同一张 GPU 在不同阶段扮演的角色。
+- **EP 度**：参与 EP 的 GPU 数，即 EP Group 的大小；**EP Group** 是共同持有全部 Expert、彼此做 All-to-All 的一组 GPU（详见 `dpa_ep.md` 第 2 节）。
+- **EP = TP × DP**：以 vLLM 的 EP 部署为例，EP 度不是独立配置的，而是由配置推导：Attention 侧的 DP 度为 DP（TP = 1 时 Attention 权重在所有 DP rank 上复制，即 DPA 形态），Expert 侧的 EP 度为 TP × DP，两侧共享同一组 GPU。所以开头的"乘积"是 TP × DP，EP 是推导量，不是再乘一次的因子。
 
 为什么 Attention 用 DP、MoE 用 EP，见 `dp_attention.md` 和 `dpa_ep.md`。

@@ -80,7 +80,7 @@ TP 和 EP 都切权重，但通信模式差别很大：
 
 ### 对照 PDD 的 KV 传输：同一张网络上的两种流量模式
 
-Prefill–Decode 分离（PDD，Prefill 与 Decode 跑在独立实例，Prefill 完成后把 KV 移交给 Decode）的 KV 传输是**固定的 1:1 rail 对 rail 双射**：Prefill 实例的 TP rank i 发给对端 Decode 实例的 TP rank i（如 TP8 下 8 路分片并发传输），模式确定、与请求内容无关，可批量、可与计算重叠。EP 的 Dispatch 则相反：**动态（路由结果）、逐层、延迟敏感**的 any-to-any。同一张 RDMA 网络承载这两种模式——这也是 PDD 的"KV 传输"用通用传输库即可工程化，而 EP 的"Dispatch/Combine"需要专用通信库、并构成大 MoE 推理通信层核心的原因。
+Prefill–Decode 分离（PDD，Prefill 与 Decode 跑在独立实例，Prefill 完成后把 KV 移交给 Decode，概念见 `inference.md` 第 5 节）的 KV 传输是**固定的 1:1 rail 对 rail 双射**：Prefill 实例的 TP rank i 发给对端 Decode 实例的 TP rank i（如 TP8 下 8 路分片并发传输），模式确定、与请求内容无关，可批量、可与计算重叠。EP 的 Dispatch 则相反：**动态（路由结果）、逐层、延迟敏感**的 any-to-any。同一张 RDMA 网络承载这两种模式——这也是 PDD 的"KV 传输"用通用传输库即可工程化，而 EP 的"Dispatch/Combine"需要专用通信库、并构成大 MoE 推理通信层核心的原因。
 
 ## 4. 计算侧：token 被 Router 散到各卡
 
@@ -147,6 +147,12 @@ EP 不是免费的，代价集中在 MoE 层的集合通信与负载上（末两
 | DP rank 同步 | 各 DP rank 的 request 数与序列长度不同，进出 MoE 的集合通信要所有 rank 同步参与，快的等慢的，见 `dpa_ep.md` 第 7 节 |
 | request 粘性 | request 固定在所属 DP rank 上，路由策略和 prefix cache 命中受此限制，见 `dpa_ep.md` 第 3 节 |
 
+用不用 EP、EP 度取多大，受三个条件同时约束：
+
+- **权重容量**：模型放不放得下（下界）；
+- **网络**：RDMA 带宽够不够撑住每层 MoE 的 All-to-All（上界）；
+- **负载类型**：Prefill 为主还是 Decode 为主（决定合理的 EP 度，见第 4 节）。
+
 ### 热点 Expert 的工程缓解：EPLB
 
 上述代价中，Expert 负载不均在生产里有最成熟的缓解手段：vLLM 的 **EPLB（Expert Parallel Load Balancer）**（`--enable-eplb`），两个措施：
@@ -156,11 +162,24 @@ EP 不是免费的，代价集中在 MoE 层的集合通信与负载上（末两
 
 两个措施本质相同：**不改 Router，只改物理放置**——让热点 Expert 的放置变冗余、变均匀。重映射的权重搬移走通信后端（NIXL、pynccl 等），平衡度指标为每 Expert 平均 token 数 ÷ 最大 token 数。
 
-用不用 EP、EP 度取多大，受三个条件同时约束：
+### Wide EP：把 EP 度做大
 
-- **权重容量**：模型放不放得下（下界）；
-- **网络**：RDMA 带宽够不够撑住每层 MoE 的 All-to-All（上界）；
-- **负载类型**：Prefill 为主还是 Decode 为主（决定合理的 EP 度，见第 4 节）。
+**Wide EP（Wide Expert Parallelism）** 是 NVIDIA TensorRT-LLM 提出的说法，指把 EP 度做得很大（几十张 GPU 以上），让大量 Expert 摊到更多 GPU 上。它不是新的 Attention 并行方式，而是 MoE 侧 EP 向"大规模、带负载均衡"方向的推进，可与 DEP 或 TEP 搭配（搭配命名见 `parallelism-basics.md` 第 6 节；TensorRT-LLM 文档中 Attention 侧可选 TP，适合小 batch，或 DP，适合大 batch）。
+
+**要解决的问题**：Expert 权重占显存大；各 Expert 收到的 token 不均衡，出现热点 Expert；Expert 之间的通信开销大。
+
+**核心思路**：
+
+- **EP 度做大**：每张卡分到的 Expert 更少，省出的显存可留给 KV Cache，每步从显存读取的权重也更少，对 memory-bound 的 Decode 有利。
+- **Expert slot 与具体 Expert 解耦**：这是 Wide EP 区别于普通 EP 的关键。GPU 上放的是"槽位"，不固定绑定某个 Expert，因此热点 Expert 可以在多张 GPU 上**复制**，Expert 的放置也可以根据负载**动态调整**。这与上面 EPLB 的"不改 Router，只改物理放置"是同一类思路。
+- **负载均衡器**：支持离线和在线两种。NVIDIA 的技术博客认为，基于实时请求流量的在线均衡比纯离线更稳健，因为各 EP rank 间的不均衡模式在时间上相对稳定，值得做权重重新分配。
+- **通信 kernel 与互联**：EP 度大意味着 All-to-All 参与方多、通信量大，所以配套了专门的 EP 通信 kernel，并针对 GB200 NVL72 这类多节点 NVLink 互联做了优化；DeepSeek 的 DeepEP、EPLB 是其背景工作。
+
+**与本节其他内容的关系**：Wide EP 是热点 Expert 的工程解法之一，同时试图靠高速互联和 kernel 优化，把上表"EP 度过大收益递减"的边界往外推。
+
+**注意**：以上来自 NVIDIA 的文档与博客（非 `config.json` 计算），"Wide EP"主要是 TensorRT-LLM 的叫法；其他引擎（如 vLLM、SGLang）有类似的大规模 EP 与专家负载均衡做法，但名称和实现不一定相同。具体性能数据请查看 NVIDIA 原始博客，本文不引用。
+
+参考：[Scaling Large MoE Models with Wide Expert Parallelism on NVL72 Rack Scale Systems](https://developer.nvidia.com/blog/scaling-large-moe-models-with-wide-expert-parallelism-on-nvl72-rack-scale-systems)、[Scaling Expert Parallelism in TensorRT LLM (Part 1)](https://nvidia.github.io/TensorRT-LLM/latest/blogs/tech_blog/blog04_Scaling_Expert_Parallelism_in_TensorRT-LLM.html)、[Parallelism in TensorRT LLM](https://nvidia.github.io/TensorRT-LLM/latest/features/parallel-strategy.html)。
 
 ## 7. 小结
 
