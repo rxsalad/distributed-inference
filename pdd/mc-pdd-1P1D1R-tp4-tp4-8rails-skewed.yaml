@@ -1,0 +1,337 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mc-pdd-router-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mc-pdd-router-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mc-pdd-router-rb
+subjects:
+  - kind: ServiceAccount
+    name: mc-pdd-router-sa
+roleRef:
+  kind: Role
+  name: mc-pdd-router-role
+  apiGroup: rbac.authorization.k8s.io
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc-pdd-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-pdd-router
+  template:
+    metadata:
+      labels:
+        app: mc-pdd-router
+    spec:
+      serviceAccountName: mc-pdd-router-sa
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+        - name: temp-python-script       
+          configMap:
+            name: rs-router-script
+      containers:
+        - name: router
+          image: vllm/vllm-openai-rocm:v0.21.0
+          imagePullPolicy: Always
+          env:
+            - name: PREFILL_APP 
+              value: "mc-pdd-prefill"
+            - name: DECODE_APP
+              value: "mc-pdd-decode"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PREFILL_PORT
+              value: "8010"
+            - name: DECODE_PORT
+              value: "8020"
+            - name: ROUTER_PORT
+              value: "8000"
+
+          command:
+            - /bin/bash
+            - -ec
+
+          args:
+            - |
+              set -euo pipefail
+
+              # Optional: Install VS Code Server
+              # curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' -o vscode_cli.tar.gz && \
+              # tar -xf vscode_cli.tar.gz && \
+              # mv code /usr/local/bin/code && \
+              # rm vscode_cli.tar.gz
+
+              # To connect using VS Code:
+              # Log in the instance using the terminal, and then run the following commands: 
+              # code tunnel user login --provider github
+              # nohup code tunnel --accept-server-license-terms --name 001 &> output.log &
+
+              pip install --no-cache-dir kubernetes requests
+              python /app/mc-pdd-router.py 
+
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: temp-python-script
+              mountPath: /app/mc-pdd-router.py
+              subPath: mc-pdd-router.py
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc-pdd-prefill
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-pdd-prefill
+  template:
+    metadata:
+      labels:
+        app: mc-pdd-prefill
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          ipvlan-fabric0@net0,
+          ipvlan-fabric1@net1,
+          ipvlan-fabric2@net2,
+          ipvlan-fabric3@net3,
+          ipvlan-fabric4@net4,
+          ipvlan-fabric5@net5,
+          ipvlan-fabric6@net6,
+          ipvlan-fabric7@net7
+    spec:
+      restartPolicy: Always
+
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: amd
+
+      tolerations:
+        - key: amd.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      volumes:
+        - name: temp-hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+      containers:
+        - name: server
+          image: vllm/vllm-openai-rocm:v0.21.0
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8010
+              name: http
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -ex
+
+              apt update
+              apt install -y iproute2 net-tools iputils-ping
+              apt install -y infiniband-diags ibverbs-utils
+              pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+              #MC_TE_FILTERS=mlx5_0 \       
+              #MC_TE_FILTERS_EXCLUDE=mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7 \
+              #MC_NUM_QP_PER_EP=8 \
+              #MC_LOG_LEVEL=INFO \
+              #MC_TE_METRIC=1 \
+
+              HIP_VISIBLE_DEVICES=0,1,2,3 \
+              MC_IB_TC=104 \
+              MC_IB_PCI_RELAXED_ORDERING=1 \
+              MC_NUM_QP_PER_EP=4 \
+              MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+              vllm serve Qwen/Qwen3-8B \
+                --no-enable-prefix-caching \
+                --tensor-parallel-size 4 \
+                --host 0.0.0.0 \
+                --port 8010 \
+                --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_producer"}'
+
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+
+          volumeMounts:
+            - name: temp-hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+            limits:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+            requests:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mc-pdd-decode
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-pdd-decode
+  template:
+    metadata:
+      labels:
+        app: mc-pdd-decode
+      annotations:
+        k8s.v1.cni.cncf.io/networks: >-
+          ipvlan-fabric0@net0,
+          ipvlan-fabric1@net1,
+          ipvlan-fabric2@net2,
+          ipvlan-fabric3@net3,
+          ipvlan-fabric4@net4,
+          ipvlan-fabric5@net5,
+          ipvlan-fabric6@net6,
+          ipvlan-fabric7@net7
+    spec:
+      restartPolicy: Always
+
+      nodeSelector:
+        doks.digitalocean.com/gpu-brand: amd
+
+      tolerations:
+        - key: amd.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      volumes:
+        - name: temp-hf-cache
+          hostPath:
+            path: /root/.cache/huggingface
+            type: DirectoryOrCreate
+
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Gi
+
+      containers:
+        - name: server
+          image: vllm/vllm-openai-rocm:v0.21.0
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8020
+              name: http
+
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -ex
+
+              apt update
+              apt install -y iproute2 net-tools iputils-ping
+              apt install -y infiniband-diags ibverbs-utils
+              pip install --no-cache-dir mooncake-transfer-engine-non-cuda==0.3.10.post2
+
+              #MC_TE_FILTERS=mlx5_0 \       
+              #MC_TE_FILTERS_EXCLUDE=mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7 \
+              #MC_NUM_QP_PER_EP=8 \
+              #MC_LOG_LEVEL=INFO \
+              #MC_TE_METRIC=1 \
+
+              HIP_VISIBLE_DEVICES=4,5,6,7 \
+              MC_IB_TC=104 \
+              MC_IB_PCI_RELAXED_ORDERING=1 \
+              MC_NUM_QP_PER_EP=4 \
+              MC_ENABLE_DEST_DEVICE_AFFINITY=1 \
+              vllm serve Qwen/Qwen3-8B \
+                --no-enable-prefix-caching \
+                --tensor-parallel-size 4 \
+                --host 0.0.0.0 \
+                --port 8020 \
+                --kv-transfer-config '{"kv_connector":"MooncakeConnector","kv_role":"kv_consumer"}'
+
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+
+          volumeMounts:
+            - name: temp-hf-cache
+              mountPath: /root/.cache/huggingface
+
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+            limits:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
+            requests:
+              amd.com/gpu: "8"
+              rdma/fabric0: 10
+              rdma/fabric1: 10
+              rdma/fabric2: 10
+              rdma/fabric3: 10
+              rdma/fabric4: 10
+              rdma/fabric5: 10
+              rdma/fabric6: 10
+              rdma/fabric7: 10
