@@ -13,7 +13,15 @@
 3. **写入 KV Cache**：每层把这 N 个 token 的 K、V 存下来，供 Decode 复用。
 4. **只取最后一个位置出结果**：每层 N 个位置都产出 hidden state，但最后只有**最后一个位置**的 hidden state 过 LM Head，得到 logits 并采样出第一个新 token；其余 N-1 个位置的输出只用于推进后续层的计算。
 
-关于第 4 步：Mask 管的是"谁能看见谁"，输出哪个位置由这一步决定。主流推理引擎在进入 LM Head 之前就先切出最后一个位置，不会对全部 N 个位置算完 logits 再丢弃（否则 `[N, d_model] × [d_model, vocab]` 的大 GEMM 和 `[N, vocab]` 的 logits 显存都是浪费）。例外：请求要求返回 prompt 每个 token 的概率（如 `prompt_logprobs` / `echo`）或做 perplexity 评估时，才需要对所有位置算 LM Head。
+Mask 管的是"谁能看见谁"，输出哪个位置由第 4 步决定。主流推理引擎在进入 LM Head 之前就先切出最后一个位置，不会对全部 N 个位置算完 logits 再丢弃（否则 `[N, d_model] × [d_model, vocab]` 的大 GEMM 和 `[N, vocab]` 的 logits 显存都是浪费）。例外：请求要求返回 prompt 每个 token 的概率（如 `prompt_logprobs` / `echo`）或做 perplexity 评估时，才需要对所有位置算 LM Head。
+
+**实际中多个 prompt 同时处理（batch）**：以上四步以单个 prompt 为例；实际一个推理步里常有多个 prompt 一起 Prefill，即还有 batch size B。
+
+- **形状**：各 prompt 长度不同（$N_1, N_2, \dots$）。传统做法是 padding 到同一长度，形状 `[B, N_max, d_model]`，会浪费算力；主流引擎直接把所有 prompt 的 token 拼成 `[总 token 数, d_model]`，不做 padding（continuous batching，见 `decoder-only.md` 2.5）。
+- **Position-wise 算子**（QKV 投影、FFN、Norm 等）：不关心 token 属于哪个 prompt，所有 token 合并成一次大 GEMM，权重只读一次，同时服务全部 prompt，算力利用率更高。
+- **Attention**：token 只能看到**自己 prompt** 内的前文，所以在 Causal Mask 之外还要隔开不同 prompt（等价于块对角的 Mask）；引擎用变长序列的 attention kernel，按各 prompt 的起止位置分别计算，不会真的构造跨 prompt 的大矩阵。
+- **KV Cache**：每个 prompt 的 K、V 写入各自的 KV Cache（按 block 分配，不同 request 互不混用）。
+- **取输出**：第 4 步对**每个 prompt 各取自己的最后一个位置**，共 B 个位置过 LM Head，得到 `[B, vocab]` 的 logits，一次采样出 B 个第一个新 token。
 
 #### "并发"到底指什么
 
@@ -21,7 +29,7 @@ Prefill 的并发**不是**"每个 token 一个进程/线程"，而是**一次�
 
 - **软件层面**：每个操作只调用一次，没有"for 每个 token"的循环。权重（如 $W_Q$）只读一次，就服务全部 N 个 token，这是 Prefill 算力利用率高的原因。Attention 虽有 token 间依赖，但依赖的是 K/V；K/V 经投影后一次性全部算出，所以 $QK^\top$ 也是一次矩阵乘。
 - **硬件层面**：GPU 执行大 GEMM 时，把输出矩阵切成许多 tile（如 128×128），分给几十到上百个 SM，每个 SM 内再由成千上万个线程并行计算。这种切分**不与 token 一一对应**：一个 tile 可能覆盖多个 token 的部分特征维度，一个 token 的计算也可能分散在多个 tile，所以不能说"一个 SM 处理一个 token"。
-- **长 prompt**：N 很大时会做 chunked prefill，把 prompt 切成若干块依次处理，以控制显存和延迟，并便于与 Decode 请求混合调度；每一块内部仍是并发的。
+- **长 prompt**：N 很大时会做 chunked prefill，把 prompt 切成若干块依次处理，以控制显存和延迟；每一块内部仍是并发的。调度器把这些块与其他请求的 Decode token 拼进同一个 batch（continuous batching，见第 3 节与 `decoder-only.md` 2.5），避免长 prompt 独占一步而拖慢 Decode。
 
 **与多卡并行的区别（容易混淆）**：
 
@@ -53,22 +61,26 @@ Decode 无法像训练那样一次算完，因为后面的 token 还没生成：
 | KV Cache | 不需要 | 写入 | 追加并读取全部历史 |
 | 瓶颈 | 算力 | 算力 | 带宽（memory-bound） |
 
+**训练为什么写"KV Cache：不需要"**：训练时整条序列一次前向算完，K、V 只在这一次前向里用，不需要跨步缓存。训练时 K、V 仍会作为中间激活留在显存里供反向传播使用，但这和推理的 KV Cache 是两回事：前者是一次前向内、为反向传播保存的激活，用完即丢；后者是跨推理步持久保存、逐步追加的缓存。
+
 LM Head 的差别在词表很大时很可观：训练要算 `[N, d_model] × [d_model, vocab]`，Prefill 只需其中 1 行。推理因此是"Prefill（算力型）+ Decode（带宽型）"两类负载，训练只有前者。
 
-**Decode 的两类瓶颈**：
-- Attention：Q 只有 1 个 token，却要读该序列全部历史 KV Cache，是 memory-bound（MLA 压缩这份 KV，DP Attention 让它保持本地）；
-- FFN：单序列时退化为 GEMV（矩阵 × 向量）；多序列 batch 后也只是小 batch GEMM，受权重读取带宽限制，算力喂不满。
+**Decode 为什么是 memory-bound**：每步计算量很小，却要读取模型权重和全部历史 KV。两类瓶颈：
+
+- **Attention**：Q 只有 1 个 token，却要读该序列全部历史 KV Cache。序列越长、并发 request 越多，KV Cache 越占显存和带宽（MLA、GQA 压缩这份 KV，DP Attention 让它保持本地，见第 2 节）；
+- **FFN**：单序列时退化为 GEMV（矩阵 × 向量）；多序列 batch 后也只是小 batch GEMM，受权重读取带宽限制，算力喂不满。
 
 ## 2. KV Cache
 
 **为什么能缓存**：Causal Mask 保证已有 token 看不到后面的 token，所以历史 token 的 K、V 一旦算出就不会再变。Decode 时直接复用，只需为新 token 计算增量，否则每步都要重算整个前缀。
 
-**大小**（MHA / GQA）：每个 token 每层存一份 K 和一份 V，
+**大小**：每个 token 每层缓存一定数量的元素，
 
-$$\text{KV 大小/token} = 2 \times L \times n_{kv} \times d_{head} \times \text{bytes}$$
+$$\text{KV 大小/token} = L \times (\text{每层缓存元素数}) \times \text{bytes}$$
 
-例如 Llama-3-8B（$L=32$，$n_{kv}=8$，$d_{head}=128$，bf16 每个元素 2 字节）：$2 \times 32 \times 8 \times 128 \times 2 = 131072$ 字节，即每 token 128 KB；一条 4096 token 的序列约 512 MB。
-**不同 Attention 方案的 KV 大小**：KV 的大小由"每 token 每层缓存多少元素"决定，$\text{KV 大小/token} = L \times (\text{每层元素数}) \times \text{bytes}$。几种方案的区别在于 KV head 的数量，也决定了 TP 能否按 head 切分 KV：
+对 MHA / GQA，每层要存 K 和 V 各 $n_{kv}$ 个 head，每层元素数为 $2 \times n_{kv} \times d_{head}$。例如 Llama-3-8B（$L=32$，$n_{kv}=8$，$d_{head}=128$，bf16 每个元素 2 字节）：$32 \times 2 \times 8 \times 128 \times 2 = 131072$ 字节，即每 token 128 KiB；一条 4096 token 的序列约 512 MiB。
+
+**不同 Attention 方案**：区别在于 KV head 的数量，也决定了 TP 能否按 head 切分 KV：
 
 | 方案 | KV head 数 | 每 token 每层缓存元素数 | TP 下按 head 切分 KV | 例子（`config.json`） |
 | --- | --- | --- | --- | --- |
@@ -81,20 +93,18 @@ $$\text{KV 大小/token} = 2 \times L \times n_{kv} \times d_{head} \times \text
 
 | 方案 | 每 token 每层元素数 | 每 token（全部层） | 4096 token 的序列 |
 | --- | --- | --- | --- |
-| MHA（32 个 KV head） | 8192 | 512 KB | 约 2 GB |
-| GQA（8 个 KV head） | 2048 | 128 KB | 约 512 MB |
-| MQA（1 个 KV head） | 256 | 16 KB | 约 64 MB |
-| MLA（DeepSeek-V3，61 层） | 576 | 约 69 KB | 约 275 MB |
+| MHA（32 个 KV head） | 8192 | 512 KiB | 约 2 GiB |
+| GQA（8 个 KV head） | 2048 | 128 KiB | 约 512 MiB |
+| MQA（1 个 KV head） | 256 | 16 KiB | 约 64 MiB |
+| MLA（DeepSeek-V3，61 层） | 576 | 约 69 KiB | 约 275 MiB |
 
 KV 越小，容量和读取压力越小；但 KV head 越少，TP 按 head 切分 KV 就越受限。MLA 把这个矛盾推到了极致，为什么它与 TP 不匹配、DP Attention 如何解决，见 `dp_attention.md`。
-
-**对性能的影响**：Decode 每步都要读取全部历史 KV 以及模型权重，而计算量很小，因此是 memory-bound。序列越长、并发 request 越多，KV Cache 越占显存和带宽，这也是 MLA、GQA 和 DP Attention（让 KV 留在本地）要解决的问题。
 
 ## 3. 一个推理步中的 GPU 与 CPU
 
 **一个推理步 = 一次前向 + 采样**（Decode 时每个 request 每步生成 1 个 token）。CPU 的参与粒度是"每个推理步一次"，不是每层一次：
 
-1. **步前（CPU）**：调度器决定本步哪些 request 进 batch（continuous batching），为新增 token 分配 KV Cache 块，准备输入（token id、位置、block table 等）；
+1. **步前（CPU）**：调度器决定本步哪些 request 进 batch（continuous batching，形状见 `decoder-only.md` 2.5），为新增 token 分配 KV Cache 块，准备输入（token id、位置、block table 等）；
 2. **启动（CPU）**：把本步的 GPU 工作提交出去；
 3. **前向 + 采样（GPU）**：各层由 GPU 异步顺序执行，层间衔接不需要 CPU 逐层调度（MoE 的 Router 选 expert 也在 GPU 上完成）；
 4. **步后（CPU）**：拿到 token id，做停止判断（EOS、最大长度、stop 字符串）、detokenize（token id → 文本）、流式返回、更新 request 状态，再回到第 1 步。
