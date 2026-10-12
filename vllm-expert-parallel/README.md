@@ -23,7 +23,7 @@
 | 文档 | 内容 | 方案 |
 |---|---|---|
 | [`recipe.md`](recipe.md) | recipes 页面内容整理：概念（TP/DP/EP/PP/DEP/TEP）、五个策略的命令、页面描述与命令不一致之处 | 总览 |
-| [`strategy1.md`](strategy1.md) | **策略一 Multi-Node TP**：TP16 + EP16，一个实例。启动故障（MNNVL、`--disable-custom-all-reduce`）、进程、通信栈、显存与 KV、一层 MoE 的流程、TP16 与 2×TP8 的理论对比 | `tp16-server.yaml` |
+| [`strategy1.md`](strategy1.md) | **策略一 Multi-Node TEP**：TP16 Attention + EP16 MoE，一个实例。启动故障（MNNVL、`--disable-custom-all-reduce`）、进程、通信栈、显存与 KV、一层 MoE 的流程、TEP16 与 2×TEP8 的理论对比 | `tep-server.yaml` |
 | [`strategy2.md`](strategy2.md) | **策略二 Multi-Node TP + PP**：TP8 × PP2，每阶段内 EP8。层切分 [31, 30]、两阶段显存、KV 容量约为 TP16 的 2 倍、跨节点只有点对点（每步每节点 32 个 RDMA write） | `tppp-server.yaml` |
 | [`strategy3.md`](strategy3.md) | **策略三 DEP**：DP16 + EP16，hybrid-lb，两个节点都对外。进程（每节点 8 个 APIServer / EngineCore / Worker）、APIServer 与 EngineCore 的对应关系、DP wave 与陪跑、显存与 KV | `dep-server.yaml` |
 | （见 `recipe.md` 第 7 节） | **策略四 TEP**：页面上它的命令与策略一逐字相同（TP16 + EP16），所以策略一实际就是 TEP；页面描述与命令对不上的情况已记录 | — |
@@ -48,7 +48,7 @@
 
 | 文件 | 说明 | 资源名 |
 |---|---|---|
-| `tp16-server.yaml` | 策略一：StatefulSet 2 副本，TP16 + EP16 | `tp16`、`tp16-headless`、`tp16-api`（只指向 `tp16-0`） |
+| `tep-server.yaml` | 策略一：StatefulSet 2 副本，TP16 + EP16 | `tp16`、`tp16-headless`、`tp16-api`（只指向 `tp16-0`） |
 | `tppp-server.yaml` | 策略二：StatefulSet 2 副本，TP8 × PP2 | `tppp`、`tppp-headless`、`tppp-api`（只指向 `tppp-0`） |
 | `dep-server.yaml` | 策略三：StatefulSet 2 副本，DP16 + EP16，hybrid-lb | `dep`、`dep-headless`、`dep-api`（指向两个 Pod） |
 | `n-server.yaml`、`n-server1.yaml` | 早期实验用的 4 个 Pod（`sleep infinity`，在 Pod 里手动起 vLLM）；两者只差镜像（`cu130-nightly` 对 `v0.31.0`）和是否预下载模型 | `server` |

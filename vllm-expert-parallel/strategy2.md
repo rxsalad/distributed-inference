@@ -37,7 +37,7 @@ DeepSeek-V3（FP8）在 2 个 B300 节点（每节点 8 卡，共 16 张 GPU）�
 
 ## 3. 部署
 
-**文件**：`tppp-server.yaml`，基于 `tp16-server.yaml` 修改。
+**文件**：`tppp-server.yaml`，基于 `tep-server.yaml` 修改。
 - StatefulSet `tppp`，2 副本，`podManagementPolicy: Parallel`，反亲和保证两个 Pod 落在不同节点；headless Service `tppp-headless`（`publishNotReadyAddresses: true`）；Service `tppp-api` 只指向 `tppp-0`（`tppp-1` 是 headless，不提供 API）。
 - 每个 Pod 占 8 张 GPU 和 8 个 RoCE 网卡。
 - 取主节点 IP 用“循环直到非空”的写法（策略三修复的 DNS 竞态）。
@@ -63,7 +63,7 @@ vllm serve deepseek-ai/DeepSeek-V3 \
 | tppp-0 | rs-b300x8-gpu-pool-3o1v8g | 10.154.1.190 | 阶段 0（31 层），API server，EngineCore |
 | tppp-1 | rs-b300x8-gpu-pool-3o1v8w | 10.154.1.14 | 阶段 1（30 层），headless |
 
-部署前先 `kubectl delete -f tp16-server.yaml`（释放策略一占用的这两个节点）；`dep`（策略三）不受影响。
+部署前先 `kubectl delete -f tep-server.yaml`（释放策略一占用的这两个节点）；`dep`（策略三）不受影响。
 
 ## 4. 启动过程
 

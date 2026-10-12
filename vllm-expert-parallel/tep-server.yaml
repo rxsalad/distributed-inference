@@ -2,10 +2,10 @@
 # 对应 recipe.md 第 4 节。命令来自 recipes.vllm.ai（hardware=b300, nodes=2, multi_node_tp）。
 # 与页面的差异：增加 NCCL_IB_GID_INDEX=3、VLLM_ENGINE_READY_TIMEOUT_S（来自 vllm-dp16-ep-two-node.md 的实测经验）。
 #
-# 部署：kubectl apply -f tp16-server.yaml
+# 部署：kubectl apply -f tep-server.yaml
 # 日志：kubectl logs -f tp16-0
 # 验证：kubectl exec tp16-0 -- curl -s localhost:8000/v1/models
-# 删除：kubectl delete -f tp16-server.yaml
+# 删除：kubectl delete -f tep-server.yaml
 ---
 # Headless Service：给 Pod 稳定的 DNS 名（tp16-0.tp16-headless），用于解析 HEAD_IP。
 # publishNotReadyAddresses：Pod 还没 Ready 时 DNS 也要能解析（vLLM 服务启动前就要用）。

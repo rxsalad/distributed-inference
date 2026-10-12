@@ -172,7 +172,7 @@ vllm serve deepseek-ai/DeepSeek-V3 \
 
 ### 4.6 映射到本集群的做法
 
-已在本集群部署并测试，完整记录见 `strategy1.md`，部署文件为 `tp16-server.yaml`。关键发现：用 `vllm/vllm-openai:latest`（vLLM 0.31.0）时，页面命令会在启动阶段卡在 custom all-reduce 的 MNNVL 共享内存 rendezvous，需要额外加 `--disable-custom-all-reduce`。下面是部署前的草案要点：
+已在本集群部署并测试，完整记录见 `strategy1.md`，部署文件为 `tep-server.yaml`。关键发现：用 `vllm/vllm-openai:latest`（vLLM 0.31.0）时，页面命令会在启动阶段卡在 custom all-reduce 的 MNNVL 共享内存 rendezvous，需要额外加 `--disable-custom-all-reduce`。下面是部署前的草案要点：
 
 
 - 需要两个 Pod，分别占一个节点的 8 张 GPU（可用 `n-server.yaml` 的 StatefulSet，`replicas: 2` 即可）；`$HEAD_IP` 取 server-0 的 Pod IP。
@@ -253,7 +253,7 @@ vllm serve deepseek-ai/DeepSeek-V3 \
   - 但命令下面有共用注释 “they differ only by --node-rank (TP/TEP) or --data-parallel-start-rank (DEP)”，说明页面把 TP 和 TEP 当作同一条命令模板，更像是模板没按策略区分，而不是个别笔误。
   - DEP 页面也有同类问题：描述写 “Each node runs TEP over its local GPUs, with DP across nodes”，命令里却没有 TP 参数（TP 默认 1，实际是纯 DP16）。三处描述与命令不一致，更像系统性问题。没有查 recipes 仓库的源数据，无法确认哪边是对的。
 - **本文的处理**：以**命令**为准。
-  - 策略一部署的 `tp16-server.yaml` 带了 `--enable-expert-parallel`，实测每卡 16 个专家（EP16），所以它实际是 TEP（TP16 + EP16），`strategy1.md` 就是它的记录。
+  - 策略一部署的 `tep-server.yaml` 带了 `--enable-expert-parallel`，实测每卡 16 个专家（EP16），所以它实际是 TEP（TP16 + EP16），`strategy1.md` 就是它的记录。
   - 页面没有给出不带 EP 的纯 TP16。要测真正的纯 TP，需要自己去掉 `--enable-expert-parallel`：MoE 层也按 TP16 切，每个专家切 16 份，MoE 通信从 EP 变成 all-reduce。这个版本没有部署过，没有数据。
 
 ## 8. 策略五：Prefill/Decode 分离

@@ -3,8 +3,8 @@
 # 与页面的差异：
 #   - 增加 NCCL_IB_GID_INDEX=3、VLLM_ENGINE_READY_TIMEOUT_S（来自 vllm-dp16-ep-two-node.md 的实测经验）
 #   - 显式指定 --data-parallel-rpc-port 13345（之前实验里用过）
-#   - 去掉 --chat-template（镜像里的路径未验证，与 tp16-server.yaml 保持一致）
-#   - 与 tp16-server.yaml 一样保留 --enable-auto-tool-choice / --tool-call-parser / --reasoning-parser，便于对比
+#   - 去掉 --chat-template（镜像里的路径未验证，与 tep-server.yaml 保持一致）
+#   - 与 tep-server.yaml 一样保留 --enable-auto-tool-choice / --tool-call-parser / --reasoning-parser，便于对比
 #
 # 部署：kubectl apply -f dep-server.yaml
 # 日志：kubectl logs -f dep-0

@@ -1,7 +1,7 @@
 # Multi-Node TP + Pipeline Parallel (TP8 x PP2, EP 在每个阶段内)：2 个 Pod x 8 x B300 = 1 个 vLLM 实例
 # 对应 recipe.md 第 5 节。命令来自 recipes.vllm.ai（hardware=b300, nodes=2, multi_node_tp_pp）。
 # 与页面的差异：增加 NCCL_IB_GID_INDEX=3、VLLM_ENGINE_READY_TIMEOUT_S；去掉 --chat-template（镜像里路径未验证）。
-# 与 tp16-server.yaml 的差异：--tensor-parallel-size 8 --pipeline-parallel-size 2；
+# 与 tep-server.yaml 的差异：--tensor-parallel-size 8 --pipeline-parallel-size 2；
 # 不加 --disable-custom-all-reduce（TP 组都在节点内，先按页面命令试，卡住再加）。
 #
 # 部署：kubectl apply -f tppp-server.yaml

@@ -1,9 +1,11 @@
-# 策略一：Multi-Node Tensor Parallel（TP16 + EP16）实测
+# 策略一：Multi-Node TEP（TP16 Attention + EP16 MoE）实测
 
 DeepSeek-V3（FP8）在 2 个 B300 节点（每节点 8 卡，共 16 张 GPU）上作为**一个** vLLM 实例运行，对应 recipes 页面的 Multi-Node Tensor Parallel 方案。
 
+**关于"TEP"**：本方案的启动参数是 `--tensor-parallel-size 16 --enable-expert-parallel`，即 Attention 用 TP16、MoE 用 EP16，按 `../concepts/` 概念文档的命名是 **TEP**（不是纯 TP：路由专家按 EP 布局，每卡持有 16 个完整专家，见第 6.3 节）。正文用"TEP"指整个方案，"TP16"只指它的 TP 通信组。对应 recipes 页面的 Multi-Node Tensor Parallel 方案。
+
 - 实验日期：2026-10-11；镜像 `vllm/vllm-openai:latest`（实际是 vLLM 0.31.0），NCCL 2.30.7。
-- 相关文件：`recipe.md`（页面内容整理，本方案见第 4 节）、`tp16-server.yaml`（部署文件）；之前的 DP+EP 实验见 `vllm-dp8-ep-single-node.md`、`vllm-dp16-ep-two-node.md`。
+- 相关文件：`recipe.md`（页面内容整理，本方案见第 4 节）、`tep-server.yaml`（部署文件）；之前的 DP+EP 实验见 `vllm-dp8-ep-single-node.md`、`vllm-dp16-ep-two-node.md`。对照见 `strategy3.md`（DEP：DP16 + EP16，hybrid-lb）。
 - 标注约定：**实测**＝本集群的命令输出或日志；**源码核对**＝读了镜像内 vLLM 0.31.0 源码；**推断**＝由日志、机制或一般知识得出，未直接验证。
 
 ## 1. 摘要
@@ -15,10 +17,9 @@ DeepSeek-V3（FP8）在 2 个 B300 节点（每节点 8 卡，共 16 张 GPU）�
 | 进程 | 节点 0：主进程（内含 API server）+ 1 个 EngineCore + 8 个 Worker；节点 1：headless 主进程 + 8 个 Worker，**没有 EngineCore 和 API server**（第 5.1 节） |
 | Attention | TP16，16 卡共同算同一个 token；**KV cache 每卡一份完整拷贝**（16 份重复，全实例只有 2,959,680 tokens 容量）（第 6.2 节） |
 | MoE | 256 个路由专家分到 16 卡，每卡 16 个完整专家；共享专家和前 3 层稠密 FFN 按 TP16 切分（第 6.3 节） |
-| 路由通信 | **没有**：输入在 16 卡上本来就相同，各卡自己算路由、只算自己的专家，最后一次 all-reduce 汇总；没有 all-to-all，`--all2all-backend` 取默认值但未被用到（第 7 节） |
-| 每层通信 | Attention 一次 + MoE 一次，都是覆盖 16 卡（含跨节点）的 all-reduce，**标准 NCCL，跨节点走 RoCE**（实测 RDMA write 计数器 +7.78M，对 eth0 仅 25 MB）；控制类通信用 Gloo 和 TCP（第 5.2、5.3 节） |
-| 与 2×TP8 对比（理论） | 理论上 2×TP8 在低并发延迟、高并发吞吐、预填充、KV 容量（约 1.6 倍）、可靠性上占优；TP16 只在中等批量下可能持平，窗口窄（第 9 节，**未实测**） |
-| 速度（粗测，**不可靠**） | 单流 68.2 tok/s；并发 64：输出 879 tok/s；并发 512：输出 2014 tok/s；这些数据受前缀缓存命中和未预热影响，见第 8.2 节说明 |
+| 通信 | **每层两次覆盖 16 卡的 all-reduce**（Attention 一次 + MoE 一次），**没有 all-to-all**：输入在 16 卡上本来就相同，各卡自己算路由、只算自己的专家，最后一次 all-reduce 汇总；`--all2all-backend` 取默认值但未被用到（第 7 节）。标准 NCCL，**跨节点走 RoCE**（实测 RDMA write 计数器 +7.78M，对 eth0 仅 25 MB）；控制类通信用 Gloo 和 TCP（第 5.2、5.3 节） |
+| 与 2×TEP8 对比（理论） | 理论上 2×TEP8 在低并发延迟、高并发吞吐、预填充、KV 容量（约 1.6 倍）、可靠性上占优；TEP16 只在中等批量下可能持平，窗口窄（第 9 节，**理论估算，未实测**） |
+| 速度（粗测，**不可靠**） | 受前缀缓存命中和未预热影响，不建议引用，数据与说明见第 8.2 节 |
 | GPU 利用率 | 空闲时 16 卡都是 0%；一个请求期间两个节点的 16 卡都在忙（第 8.3 节） |
 
 ## 2. 方案总览
@@ -39,7 +40,7 @@ DeepSeek-V3（FP8）在 2 个 B300 节点（每节点 8 卡，共 16 张 GPU）�
 
 ## 3. 部署
 
-**文件**：`tp16-server.yaml`
+**文件**：`tep-server.yaml`
 - StatefulSet `tp16`，2 副本，`podManagementPolicy: Parallel`（TP16 要求所有 rank 同时到齐），反亲和保证两个 Pod 落在不同节点。
 - headless Service `tp16-headless`：给 Pod 稳定 DNS（`tp16-0.tp16-headless`），并设 `publishNotReadyAddresses`，Pod 未 Ready 时也能解析。
 - Service `tp16-api`：8000 端口只指向 `tp16-0`。
@@ -105,7 +106,7 @@ Custom collectives are disabled because this multi-node group does not support M
 - 与 `vllm-dp16-ep-two-node.md` 6.1 那次不同：这次 `NCCL_IB_GID_INDEX=3` 已设置，GID 表也正常（index 3 是 `fd02:...` 的 RoCE v2 地址），卡点不在 NCCL，而在 vLLM 的 custom all-reduce 初始化。
 - 源码核对（`custom_all_reduce.py`）：构造函数在 `not same_node` 且没有 MNNVL multicast 时本来就会禁用自己，但**禁用发生在 `_init_mnnvl_buffer` 的 rendezvous 之后**，所以 rendezvous 必须先通过。
 
-**处理**：加 `--disable-custom-all-reduce`。该参数让 `CustomAllreduce` 根本不会被构造，跳过这个 rendezvous；加上后启动成功。
+**处理**：加 `--disable-custom-all-reduce`。该参数让 `CustomAllreduce` 根本不会被构造，跳过这个 rendezvous；加上后启动成功。（`strategy3.md` 的 DEP 方案 TP=1，没有 TP 组，不需要这个参数。）
 
 **未验证**：vLLM / PyTorch symmetric memory 在"没有跨节点 NVLink"的机器上做 rendezvous 时为什么没能对齐，没有深挖；是否所有 v0.31.0 的跨节点 TP 都会遇到，也不清楚。
 
@@ -178,6 +179,7 @@ vLLM 的 `parallel_state.py` 为每个 GPU 通信组（比如 TP16 组）同时�
 - 与本次实验直接相关：判断"这个 TP 组是否跨节点"依赖 `cpu_group`（`in_the_same_node_as`）；4.2 里 "这个组不是同节点，所以禁用 custom all-reduce" 的判断，来源应当就是这类基于 Gloo 的拓扑信息（根据调用关系推断，没有逐行追踪那条分支）。
 - 为什么要设 `GLOO_SOCKET_IFNAME`：Gloo 需要指定网卡；在多网卡机器上（eth0 加 8 个 RoCE 网卡）不指定可能选到不可达的接口而卡住。`expert-parallel.md` 也记录了这个用途：InfiniBand 集群上强制 torch distributed 用以太网做发现，避免初始化卡住。
 - 对运行时的影响（推断，没有测）：Gloo 不在每个 token 的关键路径上，每层的 all-reduce 是 NCCL；Gloo 主要用于启动阶段交换信息和低频的同步、对象广播。实测的 eth0 流量里 Gloo 的占比没有单独统计。
+- **与 `strategy3.md` 里 Gloo 的区别**：这里的 Gloo 是 TP16 组的 `cpu_group`，用于启动阶段、对象广播和拓扑判断，不在每步的关键路径上；DEP 方案（DP>1）里还有每步的 DP 元数据同步（Worker 级）和 wave 共识（EngineCore 级）走 Gloo，见 `strategy3.md` 第 5.2 节。TEP 的 DP=1，没有后两类。
 
 ### 5.3 数据面
 
@@ -228,7 +230,7 @@ vLLM 的 `parallel_state.py` 为每个 GPU 通信组（比如 TP16 组）同时�
 - 稳态每卡显存约 246 GiB / 268.6 GiB（`nvidia-smi` 报 251,960 MiB / 275,040 MiB；`--gpu-memory-utilization` 默认 0.92，0.92 × 268.6 ≈ 247 GiB）。其中权重 40.47 GiB、KV cache 193.7 GiB，其余约 11.9 GiB（CUDA graph、激活等，由差值得出）。
 - 每卡 KV cache 193.7 GiB；全实例 KV cache 2,959,680 tokens；按 163,840 token 的单请求最大长度算，最大并发 18.06 倍（日志）。
 - 后端（日志）：Attention 用 `FLASHINFER_MLA`，prefill 用 `FLASH_ATTN MLA`；MoE 用 `FLASHINFER_TRTLLM Fp8 MoE backend`；MoE 准备/收尾组件为 `MoEPrepareAndFinalizeNoDPEPMonolithic`。
-- 每卡权重的构成（估算）：每个专家 3 × 7168 × 2048 ≈ 44.04M 参数，FP8 约 44 MB（`hidden_size=7168` 是我对 DeepSeek-V3 的已知值，没有读 config）；16 个专家 × 58 层 ≈ 38.1 GiB。与 40.47 GiB 相差约 2.4 GiB，是不属于 EP 的部分：Attention 的 TP 分片和 MLA 压缩投影、前 3 层稠密 FFN、共享专家、embedding、lm_head。数量级吻合，拆分是估算，不是实测。
+- 每卡权重的构成（估算）：每个专家 3 × 7168 × 2048 ≈ 44.04M 参数，FP8 约 44 MB（`hidden_size=7168` 是 DeepSeek-V3 的已知值；6.2 节读过 `config.json`，但这一项没有单独核对）；16 个专家 × 58 层 ≈ 38.1 GiB。与 40.47 GiB 相差约 2.4 GiB，是不属于 EP 的部分：Attention 的 TP 分片和 MLA 压缩投影、前 3 层稠密 FFN、共享专家、embedding、lm_head。数量级吻合，拆分是估算，不是实测。
 
 ### 6.2 KV cache：每张卡一份完整拷贝
 
@@ -305,7 +307,7 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 - 负载不均：每张卡处理落在自己专家上的 token，热门专家所在的卡更忙，其他卡要等它才能进入 all-reduce；vLLM 的 EPLB（`--enable-eplb`）就是为此设计的，本次没有启用。
 - Attention 与 KV cache 的 16 倍重复（第 6.2 节）。
 
-**对比 DP16 + EP**：DP 下每个 rank 的 token 不同，专家要处理别的 rank 的 token，所以必须先 all-gather（或 all-to-all 分发），MoE 后再 reduce-scatter 回去；TP16 + EP 因为输入本来就是完整副本，跳过这一步，代价是 Attention 与 KV 的重复。
+**对比 DEP（DP16 + EP）**：完整对比表见 `strategy3.md` 第 9 节。要点：DP 下每个 rank 的 token 不同，专家要处理别的 rank 的 token，必须先 all-gather（或 all-to-all 分发），MoE 后再 reduce-scatter 回去；TEP 因为输入本来就是完整副本，跳过这一步，代价是 Attention 与 KV 的重复。
 
 ## 8. 测试（实测，粗测，非严格基准）
 
@@ -329,7 +331,7 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 - 所有请求都成功（2048 / 2048，无失败）。
 - 并发从 64 升到 512，总吞吐只从 4397 增到 10072 tok/s（约 2.3 倍），TPOT 从 40 ms 涨到 206 ms；原因没有分析（推断可能与每步的跨节点集合通信和调度有关）。
 - **与已有数据对比要谨慎**：`vllm-dp16-ep-two-node.md` 的 DP16 数据用的是 `DeepSeek-V3-0324`、vLLM 0.19.2、另一套请求脚本（prompt 很短），本次是 `DeepSeek-V3`、0.31.0、512 token prompt。
-  - 单流：TP16 约 68 tok/s，DP16 当时约 34.6 tok/s、单节点 DP8 约 60 tok/s；方向上与"TP 单请求延迟更低"一致，但条件不同。
+  - 单流：TEP 约 68 tok/s，DP16 当时约 34.6 tok/s、单节点 DP8 约 60 tok/s；方向上与"TP 单请求延迟更低"一致，但条件不同。
   - 高并发：本次并发 512 输出 2014 tok/s，DP16 当时 512 并发 8203 tok/s，但负载形态不同；需要同一镜像、同一脚本重跑才能下结论。
 
 ### 8.3 GPU 利用率
@@ -337,14 +339,14 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 - 一个请求（400 token，5.5 秒）期间，节点 1 的 8 张 GPU 利用率为 90–99%（节点 0 同样为 94–99%）；请求前后都是 0%。
 - 符合 TP 的语义：每个 token 都由全部 16 张卡共同计算，所以一个请求就会让两个节点的 GPU 都参与。这与 DP+EP 不同（`vllm-dp16-ep-two-node.md` 5.1：没有请求的 rank 要陪跑 dummy batch）；TP 下不存在"没有请求的 rank"。
 
-## 9. 理论分析：TP16 + EP16（1 个实例）与 2 × (TP8 + EP8)（2 个实例）的对比
+## 9. 理论分析（估算，非实测）：TEP16（1 个实例）与 2 × TEP8（2 个实例）的对比
 
-本节是**理论估算，没有做 TP8 实测**。目的是回答：在这套硬件上，为什么要把 16 张卡合成一个 TP16 实例，而不是每个节点各跑一个 TP8 实例？
+本节是**理论估算，没有做 TEP8 实测**；全部数字都是下界估算，不是实测或预测。目的是回答：在这套硬件上，为什么要把 16 张卡合成一个 TEP16 实例，而不是每个节点各跑一个 TEP8 实例？
 
 ### 9.1 比较对象与前提
 
-- **方案 A**：本次部署，1 个实例，TP16 + EP16，跨 2 个节点。
-- **方案 B**：2 个实例，每个 TP8 + EP8，各占 1 个节点，前面由外部负载均衡分发请求。
+- **方案 A**：本次部署，1 个实例，TEP16（TP16 + EP16），跨 2 个节点。
+- **方案 B**：2 个实例，每个 TEP8（TP8 + EP8），各占 1 个节点，前面由外部负载均衡分发请求。
 - 同样是 16 张 GPU、同一模型（DeepSeek-V3 FP8）。模型一个节点放得下：权重 641 GiB，一个节点 8 × 268.6 GiB ≈ 2149 GiB。所以跨节点不是为了"放得下"（页面的多节点方案主要面向放不下的硬件，比如 8×H100）。
 - 硬件事实（实测）：节点内 NVLink，每卡 18 条链路 × 53.125 GB/s ≈ 956 GB/s（`nvidia-smi nvlink -s`）；节点间 8 个 RoCE 网卡，每个 400 Gb/s（`/sys/class/infiniband/mlx5_N/ports/1/rate`），合计线速 400 GB/s / 节点 / 方向；没有跨节点 NVLink（见 4.3）。
 - 记号：B = 一个解码步里实例内的 token 数（约等于并发请求数）。对比时取**同样的总并发**：A 的 B 等于 B 方案两个实例的 B 之和，即每个 TP8 实例各 B/2。
@@ -352,7 +354,7 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 
 ### 9.2 总览
 
-| 维度 | A：TP16 | B：2 × TP8 | 理论上倾向 |
+| 维度 | A：TEP16 | B：2 × TEP8 | 理论上倾向 |
 |---|---|---|---|
 | 每卡权重 | 40.5 GiB（实测） | 约 80 GiB（估算） | A（但 B 的显存也够用） |
 | KV cache 总容量 | 2.96M tokens（实测） | 约 4.7M tokens（估算） | **B（约 1.6 倍）** |
@@ -406,7 +408,7 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 
 把 9.4 的通信和 9.5 的权重读取合起来（假设不重叠，取延迟假设的下限–上限）：
 
-| 总并发 B | A：TP16 单步（ms） | A 吞吐（k tok/s） | B：2×TP8 单步（ms，每实例 B/2） | B 吞吐（k tok/s） | 倾向 |
+| 总并发 B | A：TEP16 单步（ms） | A 吞吐（k tok/s） | B：2×TEP8 单步（ms，每实例 B/2） | B 吞吐（k tok/s） | 倾向 |
 |---|---|---|---|---|---|
 | 8 | 4.8–8.5 | 0.9–1.7 | 2.5–3.7 | 2.2–3.3 | B（约 2 倍） |
 | 32 | 7.1–10.7 | 3.0–4.5 | 5.3–6.6 | 4.9–6.0 | B |
@@ -430,7 +432,7 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 
 ### 9.8 非性能因素
 
-| 因素 | A：TP16 | B：2 × TP8 |
+| 因素 | A：TEP16 | B：2 × TEP8 |
 |---|---|---|
 | 故障域 | 一个节点出问题，整个实例不可用 | 剩一半容量继续服务 |
 | 网络依赖 | 依赖 RoCE 质量（实测 `packet_seq_err` 持续增长，原因未排查） | 不依赖节点间网络 |
@@ -441,23 +443,23 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 
 ### 9.9 结论与可验证的预测
 
-- **在这套 HGX B300（节点间无 NVLink）上，理论上 2 × TP8 在以下方面占优**：低并发延迟、高并发吞吐、预填充 / TTFT、KV 容量（约 1.6 倍）、可靠性；TP16 只有在中等批量（总并发约 100–500）下才可能持平或略占优，窗口很窄。
-- TP16 / EP16 的核心收益是"每个专家权重每步只读一次，服务更多 token"（最高 2 倍的权重读取效率）。要兑现它，跨节点通信必须足够便宜，比如有 MNNVL（NVL72 之类），或者不用"每层对全部 token 做 all-reduce"的方式，而是 DP attention + 只把 token 分发到选中的专家（即页面的 DEP，也是大规模 EP 部署的做法）。后者是之后对比其他策略的出发点。
-- 页面把多节点 TP 标为"低延迟"，是在多节点方案之间比较，并没有与单节点 TP8 实例比较，所以与上面的结论不矛盾。
+- **在这套 HGX B300（节点间无 NVLink）上，理论上 2 × TEP8 在以下方面占优**：低并发延迟、高并发吞吐、预填充 / TTFT、KV 容量（约 1.6 倍）、可靠性；TEP16 只有在中等批量（总并发约 100–500）下才可能持平或略占优，窗口很窄。
+- TEP16 的核心收益是"每个专家权重每步只读一次，服务更多 token"（最高 2 倍的权重读取效率）。要兑现它，跨节点通信必须足够便宜，比如有 MNNVL（NVL72 之类），或者不用"每层对全部 token 做 all-reduce"的方式，而是 DP attention + 只把 token 分发到选中的专家（即页面的 DEP，也是大规模 EP 部署的做法）。后者是之后对比其他策略的出发点。
+- 页面把多节点 TP 标为"低延迟"，是在多节点方案之间比较，并没有与单节点 TEP8 实例比较，所以与上面的结论不矛盾。
 - **可验证的预测（未实测）**：
-  1. 单个 TP8 实例的 c=1 TPOT 比 A 的 13.4 ms 低，量级约 2–5 ms（节点间通信延迟之差）。
+  1. 单个 TEP8 实例的 c=1 TPOT 比 A 的 13.4 ms 低，量级约 2–5 ms（节点间通信延迟之差）。
   2. 总并发约 128–512 时，两个方案的吞吐差在 ±10% 以内。
-  3. 总并发 ≥ 2048 或 8000 token 的长 prompt 时，2 × TP8 明显更高（吞吐或 TTFT）。
-  4. 单个 TP8 实例的 KV cache 约 2.35M tokens。
+  3. 总并发 ≥ 2048 或 8000 token 的长 prompt 时，2 × TEP8 明显更高（吞吐或 TTFT）。
+  4. 单个 TEP8 实例的 KV cache 约 2.35M tokens。
 
 ## 10. 结论
 
-- 在 B300 双节点上，TP16 + EP16 可以部署 DeepSeek-V3（FP8），16 张卡作为一个实例，节点 0 对外服务，节点 1 是 headless worker。
+- 在 B300 双节点上，TEP（TP16 + EP16）可以部署 DeepSeek-V3（FP8），16 张卡作为一个实例，节点 0 对外服务，节点 1 是 headless worker。
 - 用 `latest`（0.31.0）镜像必须加 `--disable-custom-all-reduce`，原因是这批 B300 没有 MNNVL，vLLM 的初始化顺序使它卡死；加上后没有实际性能损失。
-- 这个方案不需要路由通信：输入在 16 卡上本来就相同，每层只有 Attention 和 MoE 各一次 16 卡 all-reduce，没有 all-to-all。代价是 Attention 与 KV cache 的 16 倍重复，全实例 KV 容量只有 2.96M tokens。
+- 这个方案不需要路由通信（细节见第 7 节）：每层只有 Attention 和 MoE 各一次 16 卡 all-reduce，没有 all-to-all。代价是 Attention 与 KV cache 的 16 倍重复（第 6.2 节）。
 - 单流速度高于之前的 DP16（68 vs 34.6 tok/s，条件不同）；高并发是否更优需要同条件对比。
 - 启动慢（约 17 分钟），主要是预热而不是加载权重。
-- 与 2 个 TP8 实例相比，理论上 TP16 跨节点在这套硬件上没有明显优势（第 9 节）；是否值得，取决于是否有廉价的跨节点互联，或是否需要用 DEP 等方式来兑现 EP 的权重读取收益。
+- 与 2 个 TEP8 实例相比，理论上 TEP16 跨节点在这套硬件上没有明显优势（第 9 节，估算）；是否值得，取决于是否有廉价的跨节点互联，或是否需要用 DEP 等方式来兑现 EP 的权重读取收益（对照 `strategy3.md`）。
 
 ## 11. 未验证项
 
@@ -471,11 +473,11 @@ Attention 的 o_proj 之后（TP16 all-reduce）
 - 启动时间线中 19:17 → 19:22 → 19:25 → 19:30 之间各阶段的耗时没有逐项计时。
 - `tool_chat_template_deepseekv3.jinja` 在镜像里的位置没有确认，工具调用没有测。
 - KV cache 的数据类型是假设跟随模型（bfloat16），没有在日志里直接确认。
-- 第 9 节全部是理论估算：没有部署 TP8 做实测对比；HBM 带宽（约 8 TB/s）、集合通信延迟、均匀路由等都是假设，没有在这批机器上测量。
+- 第 9 节全部是理论估算：没有部署 TEP8 做实测对比；HBM 带宽（约 8 TB/s）、集合通信延迟、均匀路由等都是假设，没有在这批机器上测量。
 
 ## 12. 运维备注
 
-- 服务当前仍在运行：`tp16-0`、`tp16-1`，占满节点 `rs-b300x8-gpu-pool-3o1v8g` 和 `3o1v8w` 的 16 张 GPU（另外两个 B300 节点空闲）。
-- 查看：`kubectl get pods`；日志：`kubectl logs -f tp16-0`；验证：`kubectl exec tp16-0 -- curl -s localhost:8000/v1/models`。
-- 停止：`kubectl delete -f tp16-server.yaml`（节点上的 HF 缓存保留，下次启动不用重新下载）。
+- 本文测试时（2026-10-11）`tp16-0`、`tp16-1` 占满节点 `rs-b300x8-gpu-pool-3o1v8g` 和 `3o1v8w` 的 16 张 GPU。**2026-10-12 查看集群时**，`tp16-*` 已不存在，这两个节点现在运行的是 `tppp-0`、`tppp-1`（`tppp-server.yaml`，见 `strategy2.md`），另外两个节点运行 `dep-0`、`dep-1`（`strategy3.md`）；四个 GPU 节点都被占用。
+- 若要重新部署本方案：`kubectl apply -f tep-server.yaml`；日志：`kubectl logs -f tp16-0`；验证：`kubectl exec tp16-0 -- curl -s localhost:8000/v1/models`。
+- 停止：`kubectl delete -f tep-server.yaml`（节点上的 HF 缓存保留，下次启动不用重新下载）。
 - 后续可做：在同一镜像、同一脚本下与 TP8 × PP2、DEP（hybrid-lb）对比；排查 FlashInfer all-reduce 初始化失败；用 `NCCL_DEBUG=INFO` 确认传输路径；启用 `--enable-eplb` 看专家负载。
